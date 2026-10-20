@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Trung Tâm Điều Phối Cứu Hộ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body class="bg-dark text-white">
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>🚨 BẢNG ĐIỀU PHỐI CỨU NẠN THỜI GIAN THỰC</h3>
+        <span class="badge bg-success" id="connection-status">Đang kết nối WebSocket...</span>
+    </div>
+
+    <div class="card bg-secondary text-white">
+        <div class="card-header fw-bold">Danh sách Ca cứu nạn mới tiếp nhận</div>
+        <div class="card-body">
+            <table class="table table-dark table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th>Mã SOS</th>
+                        <th>Họ tên</th>
+                        <th>Điện thoại</th>
+                        <th>Tọa độ (Lat, Lng)</th>
+                        <th>Số người</th>
+                        <th>Ưu tiên</th>
+                        <th>Tình trạng</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="sos-table-body">
+				    <!-- Render danh sách có sẵn từ database -->
+				    <tr th:each="sos : ${sosList}" th:classappend="${sos.status == 'PENDING' ? 'table-danger' : ''}">
+				        <td><strong th:text="'#' + ${sos.sosId}">#1</strong></td>
+				        <td th:text="${sos.senderName}">Họ tên</td>
+				        <td>
+				            <a th:href="'tel:' + ${sos.phoneNumber}" class="text-warning fw-bold" th:text="${sos.phoneNumber}">0912345678</a>
+				        </td>
+				        <td th:text="${#numbers.formatDecimal(sos.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(sos.longitude, 1, 4)}">Tọa độ</td>
+				        <td><span class="badge bg-info text-dark" th:text="${sos.numberOfPeople} + ' người'">1 người</span></td>
+				        <td><span class="badge bg-danger" th:text="${sos.priority}">CRITICAL</span></td>
+				        <td><span class="badge bg-warning text-dark" th:text="${sos.status}">PENDING</span></td>
+				        <td>
+				            <button class="btn btn-sm btn-primary" th:onclick="'alert(\'Vị trí: ' + ${sos.latitude} + ', ' + ${sos.longitude} + '\')'">
+				                Chi tiết
+				            </button>
+				        </td>
+				    </tr>
+				</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Âm thanh chuông báo động khi có ca mới -->
+<audio id="sosAudio" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+
+<script>
+    const socket = new SockJS('/ws-rescue');
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function (frame) {
+        document.getElementById('connection-status').innerText = 'WebSocket: Sẵn sàng trực chiến';
+        
+        // Lắng nghe kênh tin SOS khẩn cấp
+        stompClient.subscribe('/topic/manager/sos-alerts', function (messageOutput) {
+            const sos = JSON.parse(messageOutput.body);
+            showNewSosAlert(sos);
+        });
+    });
+
+    function showNewSosAlert(sos) {
+        // Phát chuông báo động
+        document.getElementById('sosAudio').play().catch(e => console.log("Cần tương tác người dùng để phát audio"));
+
+        const tbody = document.getElementById('sos-table-body');
+        const row = document.createElement('tr');
+        row.className = 'table-danger border-warning';
+        row.innerHTML = `
+            <td><strong>#${sos.sosId}</strong></td>
+            <td>${sos.senderName}</td>
+            <td><a href="tel:${sos.phoneNumber}" class="text-warning fw-bold">${sos.phoneNumber}</a></td>
+            <td>${sos.latitude.toFixed(4)}, ${sos.longitude.toFixed(4)}</td>
+            <td><span class="badge bg-info text-dark">${sos.numberOfPeople} người</span></td>
+            <td><span class="badge bg-danger">${sos.priority}</span></td>
+            <td><span class="badge bg-warning text-dark">${sos.status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="alert('Mở bản đồ điều phối cano tới tọa độ: ' + ${sos.latitude} + ', ' + ${sos.longitude})">
+                    Xem & Điều cano
+                </button>
+            </td>
+        `;
+        tbody.insertBefore(row, tbody.firstChild);
+    }
+</script>
+</body>
+</html>
