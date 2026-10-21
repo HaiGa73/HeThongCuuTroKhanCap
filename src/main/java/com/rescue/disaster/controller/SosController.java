@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/sos")
@@ -16,14 +17,17 @@ public class SosController {
 
     @GetMapping
     public String showSosForm(Model model) {
-        model.addAttribute("sosDto", new SosCreateRequestDto());
+        if (!model.containsAttribute("sosDto")) {
+            model.addAttribute("sosDto", new SosCreateRequestDto());
+        }
         return "guest/sos-form";
     }
 
     @PostMapping("/send")
-    public String handleSendSos(@ModelAttribute SosCreateRequestDto dto, Model model) {
+    public String handleSendSos(@ModelAttribute("sosDto") SosCreateRequestDto dto,
+                                RedirectAttributes redirectAttributes) {
         sosService.createSos(dto);
-        model.addAttribute("successMsg", "Tín hiệu SOS của bạn đã được chuyển tới Đội cứu nạn gần nhất!");
-        return "guest/sos-form";
+        redirectAttributes.addFlashAttribute("successMsg", "Tín hiệu SOS của bạn đã được chuyển tới Đội cứu nạn gần nhất!");
+        return "redirect:/sos"; // Dùng redirect chuẩn PRG
     }
 }

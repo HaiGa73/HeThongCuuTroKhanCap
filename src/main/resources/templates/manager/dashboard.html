@@ -2,97 +2,249 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trung Tâm Điều Phối Cứu Hộ</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- SockJS & STOMP -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        #detailMap { height: 230px; width: 100%; border-radius: 6px; }
+        .evidence-img { height: 120px; width: 120px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .evidence-img:hover { transform: scale(1.05); }
+    </style>
 </head>
 <body class="bg-dark text-white">
+
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>🚨 BẢNG ĐIỀU PHỐI CỨU NẠN THỜI GIAN THỰC</h3>
+        <h4 class="fw-bold mb-0 text-danger">🚨 TRUNG TÂM TÁC CHIẾN ĐIỀU PHỐI CỨU NẠN</h4>
         <span class="badge bg-success" id="connection-status">Đang kết nối WebSocket...</span>
     </div>
 
-    <div class="card bg-secondary text-white">
-        <div class="card-header fw-bold">Danh sách Ca cứu nạn mới tiếp nhận</div>
-        <div class="card-body">
-            <table class="table table-dark table-hover table-bordered">
-                <thead>
-                    <tr>
-                        <th>Mã SOS</th>
-                        <th>Họ tên</th>
-                        <th>Điện thoại</th>
-                        <th>Tọa độ (Lat, Lng)</th>
-                        <th>Số người</th>
-                        <th>Ưu tiên</th>
-                        <th>Tình trạng</th>
-                        <th>Hành động</th>
+    <div class="card bg-secondary text-white shadow">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            <span>Danh Sách Ca Báo Nạn Trực Tuyến</span>
+            <span class="badge bg-light text-dark" th:if="${teams != null}" th:text="'Sẵn sàng: ' + ${teams.size()} + ' đội cứu hộ'">Đội cứu hộ</span>
+        </div>
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-dark table-hover table-bordered mb-0 align-middle">
+                <thead class="table-dark">
+                    <tr class="text-center">
+                        <th style="width: 80px;">Mã SOS</th>
+                        <th>Họ tên & Liên hệ</th>
+                        <th>Địa chỉ / Tọa độ</th>
+                        <th style="width: 100px;">Số người</th>
+                        <th style="width: 110px;">Ưu tiên</th>
+                        <th style="width: 140px;">Tình trạng</th>
+                        <th style="width: 120px;">Hành động</th>
                     </tr>
                 </thead>
                 <tbody id="sos-table-body">
-				    <!-- Render danh sách có sẵn từ database -->
-				    <tr th:each="sos : ${sosList}" th:classappend="${sos.status == 'PENDING' ? 'table-danger' : ''}">
-				        <td><strong th:text="'#' + ${sos.sosId}">#1</strong></td>
-				        <td th:text="${sos.senderName}">Họ tên</td>
-				        <td>
-				            <a th:href="'tel:' + ${sos.phoneNumber}" class="text-warning fw-bold" th:text="${sos.phoneNumber}">0912345678</a>
-				        </td>
-				        <td th:text="${#numbers.formatDecimal(sos.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(sos.longitude, 1, 4)}">Tọa độ</td>
-				        <td><span class="badge bg-info text-dark" th:text="${sos.numberOfPeople} + ' người'">1 người</span></td>
-				        <td><span class="badge bg-danger" th:text="${sos.priority}">CRITICAL</span></td>
-				        <td><span class="badge bg-warning text-dark" th:text="${sos.status}">PENDING</span></td>
-				        <td>
-				            <button class="btn btn-sm btn-primary" th:onclick="'alert(\'Vị trí: ' + ${sos.latitude} + ', ' + ${sos.longitude} + '\')'">
-				                Chi tiết
-				            </button>
-				        </td>
-				    </tr>
-				</tbody>
+                    <tr th:each="sos : ${sosList}" th:id="'row-' + ${sos.sosId}"
+                        th:classappend="${sos.status == 'PENDING' ? 'table-danger' : (sos.status == 'COMPLETED' ? 'table-success' : '')}">
+                        <td class="text-center"><strong th:text="'#' + ${sos.sosId}">#1</strong></td>
+                        <td>
+                            <div class="fw-bold" th:text="${sos.senderName}">Họ tên</div>
+                            <a th:href="'tel:' + ${sos.phoneNumber}" class="text-warning text-decoration-none fw-bold" th:text="${sos.phoneNumber}">0912345678</a>
+                        </td>
+                        <td>
+                            <small class="d-block" th:text="${sos.addressDetail ?: 'Chưa có mô tả địa chỉ'}">Địa chỉ</small>
+                            <span class="badge bg-dark text-info" th:text="${#numbers.formatDecimal(sos.latitude, 1, 4)} + ', ' + ${#numbers.formatDecimal(sos.longitude, 1, 4)}">Tọa độ</span>
+                        </td>
+                        <td class="text-center"><span class="badge bg-info text-dark" th:text="${sos.numberOfPeople} + ' người'">1</span></td>
+                        <td class="text-center"><span class="badge bg-danger" th:text="${sos.priority}">CRITICAL</span></td>
+                        <td class="text-center">
+                            <span th:id="'status-badge-' + ${sos.sosId}" class="badge bg-warning text-dark" th:text="${sos.status}">PENDING</span>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-primary fw-bold" th:onclick="'openDetailModal(' + ${sos.sosId} + ')'">
+                                🔍 Xử lý
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- Âm thanh chuông báo động khi có ca mới -->
+<!-- MODAL XỬ LÝ CA CỨU HỘ & XEM ẢNH CLOUDINARY -->
+<div class="modal fade" id="sosDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="modalTitle">Chi tiết Ca SOS #</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-info">Bản đồ vị trí:</label>
+                        <div id="detailMap"></div>
+                        <div class="mt-2 text-warning small" id="modalCoords">Tọa độ: </div>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Nạn nhân:</strong> <span id="modalName"></span></p>
+                        <p class="mb-1"><strong>Điện thoại:</strong> <a id="modalPhone" href="#" class="text-warning fw-bold"></a></p>
+                        <p class="mb-1"><strong>Địa chỉ:</strong> <span id="modalAddress"></span></p>
+                        <p class="mb-1"><strong>Tình trạng nguy cấp:</strong></p>
+                        <div class="p-2 bg-secondary rounded small mb-3" id="modalDesc"></div>
+
+                        <div th:if="${teams != null and !teams.isEmpty()}">
+                            <label class="form-label fw-bold text-info">Gán Đội Cứu Nạn Tiếp Cận:</label>
+                            <select class="form-select bg-secondary text-white border-0" id="selectTeam">
+                                <option value="">-- Chọn đội cano/xuồng tiếp cận --</option>
+                                <option th:each="t : ${teams}" th:value="${t.teamId}" 
+                                        th:text="${t.teamName} + ' (' +${t.vehicleType} + ' - Sức chứa: ' + ${t.vehicleCapacity} + ' người)'">
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-secondary">
+                <h6 class="fw-bold text-info">Hình ảnh/Tài liệu hiện trường (Cloudinary):</h6>
+                <div class="d-flex flex-wrap gap-2" id="modalMediaContainer"></div>
+            </div>
+            <div class="modal-footer border-secondary justify-content-between">
+                <div>
+                    <button class="btn btn-warning btn-sm fw-bold" onclick="updateCurrentSosStatus('VERIFIED')">Xác minh đúng</button>
+                    <button class="btn btn-info btn-sm fw-bold" onclick="updateCurrentSosStatus('IN_PROGRESS')">Đang tiếp cận</button>
+                    <button class="btn btn-success btn-sm fw-bold" onclick="updateCurrentSosStatus('COMPLETED')">Đã cứu thành công</button>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <audio id="sosAudio" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+    let activeSosId = null;
+    let detailMap = null;
+    let detailMarker = null;
+    const modalElement = new bootstrap.Modal(document.getElementById('sosDetailModal'));
+
+    // WebSocket STOMP
     const socket = new SockJS('/ws-rescue');
     const stompClient = Stomp.over(socket);
+    stompClient.debug = null;
 
-    stompClient.connect({}, function (frame) {
+    stompClient.connect({}, function () {
         document.getElementById('connection-status').innerText = 'WebSocket: Sẵn sàng trực chiến';
-        
-        // Lắng nghe kênh tin SOS khẩn cấp
-        stompClient.subscribe('/topic/manager/sos-alerts', function (messageOutput) {
-            const sos = JSON.parse(messageOutput.body);
-            showNewSosAlert(sos);
+
+        // Nhận ca SOS mới
+        stompClient.subscribe('/topic/manager/sos-alerts', function (msg) {
+            const sos = JSON.parse(msg.body);
+            insertSosRow(sos);
+        });
+
+        // Cập nhật trạng thái
+        stompClient.subscribe('/topic/manager/sos-status-updated', function (msg) {
+            const sos = JSON.parse(msg.body);
+            const badge = document.getElementById(`status-badge-${sos.sosId}`);
+            if (badge) {
+                badge.innerText = sos.status;
+                if (sos.status === 'COMPLETED') {
+                    document.getElementById(`row-${sos.sosId}`).className = 'table-success';
+                }
+            }
         });
     });
 
-    function showNewSosAlert(sos) {
-        // Phát chuông báo động
-        document.getElementById('sosAudio').play().catch(e => console.log("Cần tương tác người dùng để phát audio"));
-
+    function insertSosRow(sos) {
+        document.getElementById('sosAudio').play().catch(() => {});
         const tbody = document.getElementById('sos-table-body');
-        const row = document.createElement('tr');
-        row.className = 'table-danger border-warning';
-        row.innerHTML = `
-            <td><strong>#${sos.sosId}</strong></td>
-            <td>${sos.senderName}</td>
-            <td><a href="tel:${sos.phoneNumber}" class="text-warning fw-bold">${sos.phoneNumber}</a></td>
-            <td>${sos.latitude.toFixed(4)}, ${sos.longitude.toFixed(4)}</td>
-            <td><span class="badge bg-info text-dark">${sos.numberOfPeople} người</span></td>
-            <td><span class="badge bg-danger">${sos.priority}</span></td>
-            <td><span class="badge bg-warning text-dark">${sos.status}</span></td>
+        const tr = document.createElement('tr');
+        tr.id = `row-${sos.sosId}`;
+        tr.className = 'table-danger border-warning';
+        tr.innerHTML = `
+            <td class="text-center"><strong>#${sos.sosId}</strong></td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="alert('Mở bản đồ điều phối cano tới tọa độ: ' + ${sos.latitude} + ', ' + ${sos.longitude})">
-                    Xem & Điều cano
-                </button>
+                <div class="fw-bold">${sos.senderName}</div>
+                <a href="tel:${sos.phoneNumber}" class="text-warning text-decoration-none fw-bold">${sos.phoneNumber}</a>
+            </td>
+            <td>
+                <small class="d-block">${sos.addressDetail || 'Chưa có mô tả'}</small>
+                <span class="badge bg-dark text-info">${Number(sos.latitude).toFixed(4)}, ${Number(sos.longitude).toFixed(4)}</span>
+            </td>
+            <td class="text-center"><span class="badge bg-info text-dark">${sos.numberOfPeople} người</span></td>
+            <td class="text-center"><span class="badge bg-danger">${sos.priority}</span></td>
+            <td class="text-center"><span id="status-badge-${sos.sosId}" class="badge bg-warning text-dark">${sos.status}</span></td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-primary fw-bold" onclick="openDetailModal(${sos.sosId})">🔍 Xử lý</button>
             </td>
         `;
-        tbody.insertBefore(row, tbody.firstChild);
+        tbody.insertBefore(tr, tbody.firstChild);
+    }
+
+    // Mở Modal xem chi tiết & ảnh Cloudinary
+    function openDetailModal(sosId) {
+        activeSosId = sosId;
+        fetch(`/manager/api/sos/${sosId}`)
+            .then(res => res.json())
+            .then(sos => {
+                document.getElementById('modalTitle').innerText = `Chi tiết Ca SOS #${sos.sosId}`;
+                document.getElementById('modalName').innerText = sos.senderName;
+                document.getElementById('modalPhone').innerText = sos.phoneNumber;
+                document.getElementById('modalPhone').href = `tel:${sos.phoneNumber}`;
+                document.getElementById('modalAddress').innerText = sos.addressDetail || 'Chưa cung cấp';
+                document.getElementById('modalDesc').innerText = sos.description || 'Không có ghi chú thêm.';
+                document.getElementById('modalCoords').innerText = `Tọa độ: ${sos.latitude}, ${sos.longitude}`;
+
+                // Hiển thị danh sách ảnh tải từ Cloudinary
+                const mediaContainer = document.getElementById('modalMediaContainer');
+                mediaContainer.innerHTML = '';
+                if (sos.mediaList && sos.mediaList.length > 0) {
+                    sos.mediaList.forEach(m => {
+                        const img = document.createElement('img');
+                        img.src = m.mediaUrl;
+                        img.className = 'evidence-img border border-secondary';
+                        img.onclick = () => window.open(m.mediaUrl, '_blank');
+                        mediaContainer.appendChild(img);
+                    });
+                } else {
+                    mediaContainer.innerHTML = '<span class="text-muted small">Không có hình ảnh hiện trường đính kèm.</span>';
+                }
+
+                modalElement.show();
+
+                // Cập nhật lại bản đồ Leaflet
+                setTimeout(() => {
+                    if (!detailMap) {
+                        detailMap = L.map('detailMap').setView([sos.latitude, sos.longitude], 15);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(detailMap);
+                        detailMarker = L.marker([sos.latitude, sos.longitude]).addTo(detailMap);
+                    } else {
+                        detailMap.invalidateSize();
+                        detailMap.setView([sos.latitude, sos.longitude], 15);
+                        detailMarker.setLatLng([sos.latitude, sos.longitude]);
+                    }
+                }, 300);
+            })
+            .catch(err => alert("Không tải được chi tiết ca cứu nạn: " + err));
+    }
+
+    // Gửi lệnh cập nhật trạng thái về server
+    function updateCurrentSosStatus(status) {
+        if (!activeSosId) return;
+        fetch(`/manager/api/sos/${activeSosId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        })
+        .then(res => res.json())
+        .then(() => {
+            modalElement.hide();
+        })
+        .catch(err => alert("Lỗi khi cập nhật trạng thái: " + err));
     }
 </script>
 </body>

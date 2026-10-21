@@ -36,27 +36,34 @@ public class SosRequest {
     @Column(name = "longitude", precision = 10, scale = 7, nullable = false)
     private BigDecimal longitude;
 
+    @Builder.Default
     @Column(name = "number_of_people")
     private Integer numberOfPeople = 1;
 
+    @Builder.Default
     @Column(name = "is_urgent")
     private Boolean isUrgent = true;
 
+    @Builder.Default
     @Column(name = "priority", length = 20)
-    private String priority = "HIGH"; // LOW, MEDIUM, HIGH, CRITICAL
+    private String priority = "HIGH";
 
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
+    @Builder.Default
     @Column(name = "status", length = 30)
-    private String status = "PENDING"; // PENDING, VERIFIED, ASSIGNED, IN_PROGRESS, COMPLETED
+    private String status = "PENDING";
 
+    @Builder.Default
     @Column(name = "is_deleted")
-    private Boolean isDeleted = false;
+    private Boolean isDeleted = false; // Bắt buộc có @Builder.Default để không bị gán NULL
 
+    @Builder.Default
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Builder.Default
     @OneToMany(mappedBy = "sosRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SosMedia> mediaList = new ArrayList<>();
 }

@@ -48,10 +48,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Mở thêm /manager/** để test realtime mà chưa cần qua màn hình đăng nhập
+                // Mở công khai các tài nguyên, trang lỗi và đường dẫn quản lý tạm thời để test
                 .requestMatchers(
                     "/", "/sos", "/sos/**", "/map/**", "/checkin/**", "/missing/**",
-                    "/manager/**", // <-- Thêm vào đây để test
+                    "/manager/**",
+                    "/error", 
                     "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**"
                 ).permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -61,7 +62,6 @@ public class SecurityConfig {
 
         return http.build();
     }
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
