@@ -48,10 +48,10 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Mở công khai các tài nguyên, trang lỗi và đường dẫn quản lý tạm thời để test
                 .requestMatchers(
-                    "/", "/sos", "/sos/**", "/map/**", "/checkin/**", "/missing/**",
+                    "/", "/sos", "/sos/**", "/map", "/map/**", "/checkin/**", "/missing/**",
                     "/manager/**",
+                    "/api/**", // <-- BỔ SUNG DÒNG NÀY ĐỂ MỞ QUYỀN LẤY TỌA ĐỘ
                     "/error", 
                     "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**"
                 ).permitAll()

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản Đồ Cứu Nạn & Điểm Sơ Tán Khẩn Cấp</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- SockJS & STOMP -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- Leaflet JS & Heatmap plugin -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+    <style>
+        body, html { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        #rescueMap { height: 100vh; width: 100vw; z-index: 1; }
+
+        /* Bảng điều khiển nổi */
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(33, 37, 41, 0.94);
+            color: white;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+            max-width: 320px;
+            backdrop-filter: blur(6px);
+        }
+
+        /* Chú thích màu */
+        .legend-dot {
+            height: 12px;
+            width: 12px;
+            display: inline-block;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        /* Khử toàn bộ viền trắng mặc định của Leaflet DivIcon */
+        .leaflet-div-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        /* Bong bóng hiển thị mốc vị trí */
+        .marker-bubble {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .marker-bubble:hover {
+            transform: scale(1.15);
+        }
+
+        /* Hiệu ứng nhấp nháy cho ca khẩn cấp */
+        .pulse-effect {
+            animation: pulse-ring 1.5s infinite;
+        }
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.85);
+            }
+            70% {
+                box-shadow: 0 0 0 16px rgba(220, 53, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="control-panel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold mb-0 text-danger">🗺️ BẢN ĐỒ CỨU NẠN</h6>
+        <a href="/sos" class="btn btn-sm btn-danger fw-bold">🚨 Gửi SOS</a>
+    </div>
+    <hr class="border-secondary my-2">
+
+    <div class="mb-2">
+        <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="toggleSos" checked>
+            <label class="form-check-label small" for="toggleSos">Ca cứu hộ: <span id="count-sos" class="badge bg-danger">0</span></label>
+        </div>
+        <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="toggleShelters" checked>
+            <label class="form-check-label small" for="toggleShelters">Điểm sơ tán: <span id="count-shelters" class="badge bg-success">0</span></label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="toggleHeatmap">
+            <label class="form-check-label small text-warning fw-bold" for="toggleHeatmap">🔥 Bật Bản đồ nhiệt (Heatmap)</label>
+        </div>
+    </div>
+
+    <hr class="border-secondary my-2">
+    <div class="small">
+        <div class="fw-bold mb-1 text-light">Mã màu nhận diện:</div>
+        <div class="mb-1"><span class="legend-dot bg-danger"></span> Đang chờ cứu nạn (PENDING)</div>
+        <div class="mb-1"><span class="legend-dot bg-info"></span> Đội cứu hộ đang tiếp cận</div>
+        <div class="mb-1"><span class="legend-dot bg-success"></span> Đã giải cứu an toàn</div>
+        <div class="mb-1">🏠 Điểm sơ tán tập trung</div>
+        <div>🏥 Trạm y tế dã chiến</div>
+    </div>
+    <div class="mt-2 text-end">
+        <small class="badge bg-secondary" id="ws-status">Đang kết nối WebSocket...</small>
+    </div>
+</div>
+
+<div id="rescueMap"></div>
+
+<script>
+    // 1. Khởi tạo Leaflet Map (tọa độ mặc định khu vực Đông Nam Bộ)
+    const map = L.map('rescueMap', { zoomControl: false }).setView([10.85, 107.39], 13);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const sosLayer = L.layerGroup().addTo(map);
+    const shelterLayer = L.layerGroup().addTo(map);
+    let heatLayer = null;
+
+    let sosDataCache = [];
+
+    // 2. Tạo Marker tùy chỉnh bằng DivIcon
+    function createBubbleMarker(lat, lng, color, emoji, isPulse) {
+        const pulseClass = isPulse ? 'pulse-effect' : '';
+        const customIcon = L.divIcon({
+            className: 'leaflet-div-icon',
+            html: `<div class="marker-bubble ${pulseClass}" style="background-color: ${color};">${emoji}</div>`,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18]
+        });
+        return L.marker([lat, lng], { icon: customIcon });
+    }
+
+    // 3. Tải danh sách ca cứu nạn từ API
+    function loadSosPoints() {
+        fetch('/api/map/sos-points')
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP Status: " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                console.log("Dữ liệu SOS nhận được:", data);
+                sosDataCache = data;
+                document.getElementById('count-sos').innerText = data.length;
+                renderSosMarkers();
+                renderHeatmap();
+            })
+            .catch(err => {
+                console.error("Lỗi khi tải điểm SOS:", err);
+            });
+    }
+
+    // 4. Vẽ các chấm SOS lên bản đồ
+    function renderSosMarkers() {
+        sosLayer.clearLayers();
+        const bounds = [];
+
+        sosDataCache.forEach(sos => {
+            const lat = parseFloat(sos.latitude);
+            const lng = parseFloat(sos.longitude);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            let color = '#dc3545'; // Đỏ (PENDING)
+            let emoji = '🚨';
+            let isPulse = true;
+
+            if (sos.status === 'IN_PROGRESS' || sos.status === 'ASSIGNED') {
+                color = '#0dcaf0'; // Xanh dương
+                emoji = '🚤';
+                isPulse = false;
+            } else if (sos.status === 'COMPLETED') {
+                color = '#198754'; // Xanh lá
+                emoji = '✅';
+                isPulse = false;
+            }
+
+            const marker = createBubbleMarker(lat, lng, color, emoji, isPulse);
+
+            const popupContent = `
+                <div style="font-size: 13px; min-width: 190px;">
+                    <h6 class="fw-bold mb-1 text-danger">Ca SOS #${sos.sosId}</h6>
+                    <div><strong>Họ tên:</strong> ${sos.senderName || 'Người dân'}</div>
+                    <div><strong>Số người mắc kẹt:</strong> <span class="badge bg-danger">${sos.numberOfPeople} người</span></div>
+                    <div><strong>Trạng thái:</strong> ${sos.status}</div>
+                    <div><strong>Hiện trường:</strong> ${sos.description || 'Không có mô tả'}</div>
+                    <div class="mt-2">
+                        <a href="tel:${sos.phoneNumber}" class="btn btn-sm btn-outline-danger w-100 fw-bold">📞 Gọi: ${sos.phoneNumber}</a>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupContent);
+            sosLayer.addLayer(marker);
+            bounds.push([lat, lng]);
+        });
+
+        // Tự động căn chỉnh góc nhìn bản đồ bao trọn các mốc tọa độ
+        if (bounds.length > 1) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        } else if (bounds.length === 1) {
+            map.setView(bounds[0], 15);
+        }
+    }
+
+    // 5. Tải và vẽ điểm sơ tán / trạm y tế
+    function loadShelters() {
+        fetch('/api/map/shelters')
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP Status: " + res.status);
+                return res.json();
+            })
+            .then(shelters => {
+                console.log("Dữ liệu Shelter nhận được:", shelters);
+                shelterLayer.clearLayers();
+                document.getElementById('count-shelters').innerText = shelters.length;
+
+                shelters.forEach(s => {
+                    const lat = parseFloat(s.latitude);
+                    const lng = parseFloat(s.longitude);
+                    if (isNaN(lat) || isNaN(lng)) return;
+
+                    const isMedical = s.type === 'MEDICAL';
+                    const iconColor = isMedical ? '#d63384' : '#198754';
+                    const emoji = isMedical ? '🏥' : '🏠';
+
+                    const marker = createBubbleMarker(lat, lng, iconColor, emoji, false);
+
+                    const capacityPercent = s.capacity > 0 ? Math.min(100, Math.round((s.currentOccupancy / s.capacity) * 100)) : 0;
+                    const popupContent = `
+                        <div style="font-size: 13px; min-width: 200px;">
+                            <h6 class="fw-bold mb-1 ${isMedical ? 'text-danger' : 'text-success'}">${s.name}</h6>
+                            <div><strong>Địa chỉ:</strong> ${s.address}</div>
+                            <div><strong>Sức chứa:</strong> ${s.currentOccupancy}/${s.capacity} người (${capacityPercent}%)</div>
+                            <div class="progress my-2" style="height: 6px;">
+                                <div class="progress-bar ${capacityPercent >= 90 ? 'bg-danger' : 'bg-success'}" 
+                                     style="width: ${capacityPercent}%"></div>
+                            </div>
+                            <div>
+                                <a href="tel:${s.contactPhone}" class="btn btn-sm btn-outline-success w-100 fw-bold">📞 Liên hệ: ${s.contactPhone}</a>
+                            </div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
+                    shelterLayer.addLayer(marker);
+                });
+            })
+            .catch(err => {
+                console.error("Lỗi khi tải điểm sơ tán:", err);
+            });
+    }
+
+    // 6. Bản đồ nhiệt (Heatmap)
+    function renderHeatmap() {
+        if (heatLayer) {
+            map.removeLayer(heatLayer);
+        }
+        const heatPoints = sosDataCache
+            .filter(sos => sos.status !== 'COMPLETED')
+            .map(sos => [parseFloat(sos.latitude), parseFloat(sos.longitude), (sos.priority === 'CRITICAL' ? 1.0 : 0.6)])
+            .filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+
+        heatLayer = L.heatLayer(heatPoints, { radius: 35, blur: 20, maxZoom: 14 });
+
+        if (document.getElementById('toggleHeatmap').checked) {
+            heatLayer.addTo(map);
+        }
+    }
+
+    // 7. Bật/tắt các lớp trên bản đồ
+    document.getElementById('toggleSos').addEventListener('change', function() {
+        if (this.checked) map.addLayer(sosLayer);
+        else map.removeLayer(sosLayer);
+    });
+
+    document.getElementById('toggleShelters').addEventListener('change', function() {
+        if (this.checked) map.addLayer(shelterLayer);
+        else map.removeLayer(shelterLayer);
+    });
+
+    document.getElementById('toggleHeatmap').addEventListener('change', function() {
+        if (this.checked && heatLayer) heatLayer.addTo(map);
+        else if (heatLayer) map.removeLayer(heatLayer);
+    });
+
+    // 8. Kết nối WebSocket nhận ca cứu nạn thời gian thực
+    const socket = new SockJS('/ws-rescue');
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({}, function () {
+        document.getElementById('ws-status').className = 'badge bg-success';
+        document.getElementById('ws-status').innerText = 'Live: Đang trực chiến';
+
+        // Lắng nghe tín hiệu SOS mới
+        stompClient.subscribe('/topic/manager/sos-alerts', function (msg) {
+            const newSos = JSON.parse(msg.body);
+            sosDataCache.unshift(newSos);
+            document.getElementById('count-sos').innerText = sosDataCache.length;
+            renderSosMarkers();
+            renderHeatmap();
+        });
+
+        // Lắng nghe cập nhật trạng thái
+        stompClient.subscribe('/topic/manager/sos-status-updated', function (msg) {
+            const updatedSos = JSON.parse(msg.body);
+            const index = sosDataCache.findIndex(s => s.sosId === updatedSos.sosId);
+            if (index !== -1) {
+                sosDataCache[index] = updatedSos;
+                renderSosMarkers();
+                renderHeatmap();
+            }
+        });
+    });
+
+    // Thực thi tải dữ liệu
+    loadSosPoints();
+    loadShelters();
+</script>
+</body>
+</html>
