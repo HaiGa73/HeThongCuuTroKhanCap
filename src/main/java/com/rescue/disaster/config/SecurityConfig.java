@@ -50,6 +50,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/", "/sos", "/sos/**", "/map", "/map/**", "/checkin/**", "/missing/**",
+                    "/relatives/**", // <-- MỞ QUYỀN TOÀN BỘ PHÂN HỆ TRA CỨU, BÁO AN, TÌM KIẾM
                     "/manager/**",
                     "/api/**", // <-- BỔ SUNG DÒNG NÀY ĐỂ MỞ QUYỀN LẤY TỌA ĐỘ
                     "/error", 
