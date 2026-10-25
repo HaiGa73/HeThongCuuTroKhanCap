@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Tin Tìm Người Thân Mất Liên Lạc</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-warning text-dark text-center py-3">
+                    <h4 class="mb-0 fw-bold">📢 ĐĂNG TIN TÌM NGƯỜI MẤT LIÊN LẠC</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form th:action="@{/relatives/missing/report}" method="post" enctype="multipart/form-data" th:object="${missingDto}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Họ và tên người cần tìm (*):</label>
+                            <input type="text" class="form-control" th:field="*{targetName}" placeholder="VD: Trần Văn B" required>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label class="form-label">Giới tính:</label>
+                                <select class="form-select" th:field="*{gender}">
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Tuổi ước chừng:</label>
+                                <input type="number" class="form-control" th:field="*{age}" placeholder="VD: 45">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Ảnh chân dung người cần tìm (Cloudinary):</label>
+                            <input type="file" class="form-control" name="photoFile" accept="image/*">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Vị trí / Khu vực nhìn thấy lần cuối (*):</label>
+                            <input type="text" class="form-control" th:field="*{lastSeenLocation}" placeholder="VD: Mắc kẹt gần Cầu Treo Xã Kim Liên..." required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Đặc điểm nhận dạng / Quần áo khi gặp nạn:</label>
+                            <textarea class="form-control" th:field="*{identifyingCharacteristics}" rows="2" placeholder="VD: Cao 1m65, mặc áo thun xám, nón bảo hiểm đỏ..."></textarea>
+                        </div>
+
+                        <hr>
+                        <h6 class="fw-bold text-primary">Thông tin Người nhà tiếp nhận tin tức:</h6>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Họ tên người liên hệ (*):</label>
+                                <input type="text" class="form-control" th:field="*{contactPerson}" placeholder="VD: Lê Thị C (Em gái)" required>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Số điện thoại trực máy (*):</label>
+                                <input type="tel" class="form-control" th:field="*{contactPhone}" placeholder="VD: 0988776655" required>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="/relatives/search" class="btn btn-secondary w-50">Quay lại</a>
+                            <button type="submit" class="btn btn-warning fw-bold w-50 shadow">Đăng tin tìm kiếm</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
