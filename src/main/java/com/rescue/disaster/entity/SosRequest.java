@@ -21,14 +21,15 @@ public class SosRequest {
     @Column(name = "sos_id")
     private Long sosId;
 
-    @Column(name = "sender_name")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user; // Tài khoản gửi SOS (NULL nếu là Guest vãng lai)
+
+    @Column(name = "sender_name", nullable = false, length = 150)
     private String senderName;
 
     @Column(name = "phone_number", nullable = false, length = 15)
     private String phoneNumber;
-
-    @Column(name = "address_detail")
-    private String addressDetail;
 
     @Column(name = "latitude", precision = 10, scale = 7, nullable = false)
     private BigDecimal latitude;
@@ -36,34 +37,33 @@ public class SosRequest {
     @Column(name = "longitude", precision = 10, scale = 7, nullable = false)
     private BigDecimal longitude;
 
+    @Column(name = "address_detail", length = 255)
+    private String addressDetail;
+
     @Builder.Default
     @Column(name = "number_of_people")
     private Integer numberOfPeople = 1;
 
     @Builder.Default
-    @Column(name = "is_urgent")
-    private Boolean isUrgent = true;
-
-    @Builder.Default
     @Column(name = "priority", length = 20)
     private String priority = "HIGH";
+
+    @Builder.Default
+    @Column(name = "status", length = 30)
+    private String status = "PENDING"; // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
 
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 
     @Builder.Default
-    @Column(name = "status", length = 30)
-    private String status = "PENDING";
-
-    @Builder.Default
     @Column(name = "is_deleted")
-    private Boolean isDeleted = false; // Bắt buộc có @Builder.Default để không bị gán NULL
+    private Boolean isDeleted = false;
 
     @Builder.Default
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Builder.Default
     @OneToMany(mappedBy = "sosRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<SosMedia> mediaList = new ArrayList<>();
 }

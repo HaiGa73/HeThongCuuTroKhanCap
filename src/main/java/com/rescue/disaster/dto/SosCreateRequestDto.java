@@ -1,19 +1,25 @@
 package com.rescue.disaster.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
-import java.math.BigDecimal;
+
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class SosCreateRequestDto {
     private String senderName;
     private String phoneNumber;
+    private String latitude;
+    private String longitude;
     private String addressDetail;
-    private BigDecimal latitude;
-    private BigDecimal longitude;
     private Integer numberOfPeople;
-    private Boolean isUrgent;
+    private String priority;
     private String description;
     private List<MultipartFile> files;
 }

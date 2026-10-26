@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theo Dõi Ca Cứu Nạn Của Tôi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        .media-thumbnail { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; cursor: pointer; }
+        .status-badge { font-size: 0.95rem; padding: 6px 12px; }
+    </style>
+</head>
+<body class="bg-light">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-danger" href="/">🆘 CỨU NẠN THIÊN TAI</a>
+        <div class="navbar-nav ms-auto gap-2 align-items-center">
+            <span class="text-light small">Xin chào, <strong class="text-warning" th:text="${username}">User</strong></span>
+            <a class="btn btn-outline-light btn-sm" href="/map">🗺️ Bản đồ</a>
+            <a class="btn btn-danger btn-sm fw-bold" href="/sos">🚨 Gửi SOS Mới</a>
+            <a class="btn btn-outline-danger btn-sm" href="/auth/logout">🚪 Đăng xuất</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-danger mb-0">🚨 LỊCH SỬ & TIẾN TRÌNH ỨNG CỨU CỦA BẠN</h3>
+            <p class="text-muted small mb-0">Dữ liệu được giám sát và cập nhật trực tiếp theo thời gian thực từ Đội Cứu Hộ.</p>
+        </div>
+        <span class="badge bg-success" id="ws-status">Đang kết nối vệ tinh...</span>
+    </div>
+
+    <!-- Thông báo kết quả -->
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center" role="alert">
+        <span th:text="${successMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show fw-bold text-center" role="alert">
+        <span th:text="${errorMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Danh sách ca SOS -->
+    <div th:if="${myRequests == null or myRequests.isEmpty()}" class="text-center py-5 bg-white rounded shadow-sm">
+        <h5 class="text-secondary">Hiện tại bạn chưa gửi yêu cầu cứu nạn khẩn cấp nào.</h5>
+        <a href="/sos" class="btn btn-danger mt-3 fw-bold">🚨 Tạo Yêu Cầu Cứu Nạn Khẩn Cấp</a>
+    </div>
+
+    <div class="row g-4" th:if="${myRequests != null and !myRequests.isEmpty()}">
+        <div class="col-12" th:each="sos : ${myRequests}">
+            <div class="card shadow-sm border-0 border-start border-5"
+                 th:classappend="${sos.status == 'PENDING' ? 'border-danger' : (sos.status == 'IN_PROGRESS' ? 'border-info' : (sos.status == 'COMPLETED' ? 'border-success' : 'border-secondary'))}">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">
+                                Yêu Cầu Cứu Trợ #<span th:text="${sos.sosId}">1</span> 
+                                <small class="text-muted fs-6 fw-normal" th:text="'(Gửi lúc: ' + ${#temporals.format(sos.createdAt, 'HH:mm dd/MM/yyyy')} + ')'"></small>
+                            </h5>
+                            <span class="badge bg-danger" th:text="'Mức độ: ' + ${sos.priority}">CRITICAL</span>
+                            <span class="badge bg-secondary" th:text="${sos.numberOfPeople} + ' người mắc kẹt'">1</span>
+                        </div>
+
+                        <!-- Badge trạng thái trực quan -->
+                        <div class="text-end">
+                            <span th:id="'badge-' + ${sos.sosId}" class="badge status-badge"
+                                  th:classappend="${sos.status == 'PENDING' ? 'bg-danger' : (sos.status == 'IN_PROGRESS' ? 'bg-info text-dark' : (sos.status == 'COMPLETED' ? 'bg-success' : 'bg-secondary'))}"
+                                  th:text="${sos.status == 'PENDING' ? '⏳ CHỜ ĐIỀU PHỐI TIẾP CẬN' : (sos.status == 'IN_PROGRESS' ? '🚤 ĐỘI CỨU HỘ ĐANG TRÊN ĐƯỜNG ĐẾN' : (sos.status == 'COMPLETED' ? '✅ ĐÃ GIẢI CỨU AN TOÀN' : '❌ ĐÃ HỦY'))}">
+                                PENDING
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <p class="mb-1"><strong>📍 Vị trí định vị:</strong> 
+                                <span class="text-primary fw-bold" th:text="${sos.addressDetail ?: 'Tọa độ GPS'}"></span>
+                                (<span th:text="${sos.latitude} + ', ' + ${sos.longitude}"></span>)
+                            </p>
+                            <p class="mb-2"><strong>📞 Số điện thoại tiếp nhận:</strong> <span th:text="${sos.phoneNumber}"></span></p>
+                            <div class="p-3 bg-light rounded border">
+                                <strong>Mô tả tình trạng nguy cấp:</strong>
+                                <p class="mb-0 text-secondary small mt-1" th:text="${sos.description ?: 'Không có mô tả chi tiết.'}"></p>
+                            </div>
+                        </div>
+
+                        <!-- Ảnh hiện trường đã tải lên Cloudinary -->
+                        <div class="col-md-5">
+                            <strong class="d-block mb-2 small text-muted">Hình ảnh hiện trường đã tải lên:</strong>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div th:if="${sos.mediaList.isEmpty()}" class="small text-muted fst-italic">
+                                    Không đính kèm hình ảnh.
+                                </div>
+                                <img th:each="media : ${sos.mediaList}" th:src="${media.mediaUrl}" 
+                                     class="media-thumbnail border shadow-sm" alt="Hiện trường"
+                                     onclick="window.open(this.src, '_blank')">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nút bấm Hủy ca SOS nếu đã tự an toàn -->
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center" th:if="${sos.status == 'PENDING' or sos.status == 'IN_PROGRESS'}">
+                        <span class="small text-muted">Nếu nước đã rút hoặc bạn đã được người thân hỗ trợ di tản an toàn:</span>
+                        <button class="btn btn-outline-danger btn-sm fw-bold" 
+                                th:onclick="'openCancelModal(' + ${sos.sosId} + ')'">
+                            🛑 Tôi đã tự an toàn - Hủy yêu cầu cứu trợ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận Hủy SOS -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="cancelForm" method="post" action="">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold">Xác Nhận Hủy Yêu Cầu Cứu Trợ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn hủy yêu cầu cứu hộ này không? Hành động này sẽ thông báo ngay lập tức cho Đội cứu hộ để điều chuyển xuồng/cano sang hỗ trợ các trường hợp khác.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Lý do hủy yêu cầu:</label>
+                        <select name="reason" class="form-select">
+                            <option value="Tôi đã tự sơ tán an toàn lên chỗ cao">Tôi đã tự sơ tán an toàn lên chỗ cao</option>
+                            <option value="Nước lũ đã rút, hiện không còn nguy hiểm">Nước lũ đã rút, hiện không còn nguy hiểm</option>
+                            <option value="Đã được tàu/thuyền dân sinh hỗ trợ trước">Đã được tàu/thuyền dân sinh hỗ trợ trước</option>
+                            <option value="Bấm nhầm yêu cầu">Bấm nhầm yêu cầu</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger btn-sm fw-bold">Xác Nhận Hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const cancelModal = new bootstrap.Modal(document.getElementById('cancelModal'));
+
+    function openCancelModal(sosId) {
+        document.getElementById('cancelForm').action = '/user/my-sos/' + sosId + '/cancel';
+        cancelModal.show();
+    }
+
+    // Kết nối WebSocket STOMP để cập nhật trạng thái thời gian thực
+    const socket = new SockJS('/ws-rescue');
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({}, function () {
+        document.getElementById('ws-status').innerText = 'Live: Đang giám sát tiến độ';
+
+        stompClient.subscribe('/topic/manager/sos-status-updated', function (msg) {
+            const updatedSos = JSON.parse(msg.body);
+            const badge = document.getElementById('badge-' + updatedSos.sosId);
+            if (badge) {
+                if (updatedSos.status === 'IN_PROGRESS') {
+                    badge.className = 'badge status-badge bg-info text-dark';
+                    badge.innerText = '🚤 ĐỘI CỨU HỘ ĐANG TRÊN ĐƯỜNG ĐẾN';
+                } else if (updatedSos.status === 'COMPLETED') {
+                    badge.className = 'badge status-badge bg-success';
+                    badge.innerText = '✅ ĐÃ GIẢI CỨU AN TOÀN';
+                } else if (updatedSos.status === 'CANCELLED') {
+                    badge.className = 'badge status-badge bg-secondary';
+                    badge.innerText = '❌ ĐÃ HỦY';
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>

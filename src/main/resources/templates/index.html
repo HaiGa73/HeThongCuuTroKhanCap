@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Ứng Cứu & Điều Phối Cứu Nạn Thiên Tai</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(rgba(17, 24, 39, 0.88), rgba(17, 24, 39, 0.95)), 
+                        url('https://images.unsplash.com/photo-1547683905-f686c993aae5?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;
+            padding: 85px 0 65px 0;
+        }
+        .btn-sos-pulse {
+            background-color: #dc3545;
+            color: #ffffff;
+            font-size: 1.35rem;
+            font-weight: 800;
+            padding: 16px 36px;
+            border-radius: 50px;
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            animation: pulse-red 1.6s infinite;
+            border: 2px solid #ffffff;
+            transition: transform 0.2s;
+        }
+        .btn-sos-pulse:hover {
+            transform: scale(1.06);
+            color: #ffffff;
+            background-color: #bb2d3b;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.8); }
+            70% { box-shadow: 0 0 0 22px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        .feature-card {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            transition: all 0.25s ease;
+            background: #212529;
+        }
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: #dc3545;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+        }
+        .stat-badge {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 12px 18px;
+        }
+    </style>
+</head>
+<body class="bg-dark text-white">
+
+<!-- 1. THANH ĐIỀU HƯỚNG TỔNG (NAVBAR PHÂN QUYỀN) -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-black sticky-top border-bottom border-secondary">
+    <div class="container">
+        <a class="navbar-brand fw-bold text-danger d-flex align-items-center gap-2" href="/">
+            <span class="fs-4">🚨</span>
+            <span>CỨU NẠN THIÊN TAI</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
+                <li class="nav-item"><a class="nav-link active" href="/">Trang chủ</a></li>
+                <li class="nav-item"><a class="nav-link" href="/map">🗺️ Bản đồ cứu nạn</a></li>
+                <li class="nav-item"><a class="nav-link" href="/relatives/search">🔍 Tìm thân nhân</a></li>
+                <li class="nav-item"><a class="nav-link" href="/survival-guide">📖 Cẩm nang sinh tồn</a></li>
+                <li class="nav-item"><a class="nav-link" href="/logistics/donate">🤝 Tiếp tế hỗ trợ</a></li>
+            </ul>
+
+            <!-- Phân quyền hiển thị theo trạng thái phiên làm việc -->
+            <div class="d-flex align-items-center gap-2">
+                <!-- Khi chưa đăng nhập (GUEST) -->
+                <div th:if="${!isAuthenticated}" class="d-flex gap-2">
+                    <a href="/auth/login" class="btn btn-outline-warning btn-sm fw-bold">🔑 Đăng nhập</a>
+                    <a href="/auth/register" class="btn btn-warning btn-sm fw-bold">Đăng ký</a>
+                </div>
+
+                <!-- Khi đã đăng nhập (USER / MANAGER / ADMIN) -->
+                <div th:if="${isAuthenticated}" class="d-flex align-items-center gap-2">
+                    <!-- Nút tác chiến cho Quản trị viên Ban chỉ đạo -->
+                    <a th:if="${isAdmin}" href="/analytics/dashboard" class="btn btn-warning btn-sm fw-bold">📊 Quản Trị Admin</a>
+                    
+                    <!-- Nút tác chiến cho Đội trưởng cứu hộ -->
+                    <a th:if="${isManager or isAdmin}" href="/manager/dashboard" class="btn btn-primary btn-sm fw-bold">🚤 Trực Ban Manager</a>
+
+                    <!-- Nút theo dõi ca SOS của User -->
+                    <a href="/user/my-sos" class="btn btn-outline-danger btn-sm fw-bold">🚨 Ca cứu của tôi</a>
+
+                    <span class="text-light small ms-1">Chào, <strong class="text-warning" th:text="${currentUsername}">User</strong></span>
+                    <a href="/auth/logout" class="btn btn-outline-secondary btn-sm" title="Đăng xuất">🚪</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 2. BANNER KHẨN CẤP & NÚT GỌI CỨU TRỢ MỘT CHẠM -->
+<header class="hero-section text-center">
+    <div class="container">
+        <span class="badge bg-danger px-3 py-2 fs-6 mb-3">CỔNG TIẾP NHẬN TÍN HIỆU CỨU NẠN TOÀN DÂN</span>
+        <h1 class="display-5 fw-bold mb-3 text-white">CHUNG TAY ỨNG CỨU THIÊN TAI VÀ BÃO LŨ</h1>
+        <p class="lead text-light opacity-75 col-lg-8 mx-auto mb-4">
+            Hệ thống kết nối trực tiếp tọa độ GPS của người gặp nạn với đội cano cứu trợ gần nhất, 
+            đồng thời tra cứu danh sách người thân đã sơ tán an toàn trong vùng chia cắt.
+        </p>
+
+        <!-- Nút Kêu cứu lớn -->
+        <div class="my-4">
+            <a href="/sos" class="btn btn-sos-pulse text-decoration-none">
+                🆘 GỬI YÊU CẦU CỨU NẠN NGAY (SOS)
+            </a>
+        </div>
+
+        <!-- 3 Thống kê chỉ số tác chiến -->
+        <div class="row justify-content-center g-3 mt-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-badge">
+                    <h3 class="fw-bold text-warning mb-0" th:text="${totalSos}">0</h3>
+                    <small class="text-muted">Ca SOS Đã Ghi Nhận</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-badge">
+                    <h3 class="fw-bold text-success mb-0" th:text="${completedSos}">0</h3>
+                    <small class="text-muted">Đã Giải Cứu Thành Công</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-badge">
+                    <h3 class="fw-bold text-info mb-0" th:text="${activeShelters}">0</h3>
+                    <small class="text-muted">Trạm Trú Ẩn Đang Mở</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- 3. BẢNG TIN CẢNH BÁO THIÊN TAI MỚI NHẤT -->
+<section class="py-4 bg-black border-bottom border-secondary" th:if="${latestAlerts != null and !latestAlerts.isEmpty()}">
+    <div class="container">
+        <div class="d-flex align-items-center mb-3">
+            <span class="badge bg-danger me-2">TIN MỚI</span>
+            <h5 class="fw-bold mb-0 text-warning">Thông Báo & Lệnh Khẩn Cấp Từ Ban Chỉ Đạo</h5>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4" th:each="a : ${latestAlerts}">
+                <div class="p-3 bg-secondary rounded h-100 border-start border-4 border-danger">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-white small" th:text="${a.title}">Tiêu đề</strong>
+                        <span class="badge bg-dark text-warning" th:text="${a.severity}">DANGER</span>
+                    </div>
+                    <p class="text-light small mt-1 mb-2 text-truncate" th:text="${a.content}">Nội dung tóm lược</p>
+                    <small class="text-muted" th:text="${#temporals.format(a.createdAt, 'HH:mm dd/MM/yyyy')}"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. LƯỚI CHỨC NĂNG TÁC CHIẾN CHÍNH -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h3 class="fw-bold text-danger">TRUNG TÂM PHỤC VỤ DÂN SINH & CỨU HỘ</h3>
+            <p class="text-secondary">Chọn nhanh dịch vụ bạn đang cần để được hỗ trợ kịp thời</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Thẻ 1: Bản đồ cứu nạn trực quan -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card text-white h-100 p-4">
+                    <div class="fs-1 text-danger mb-3">🗺️</div>
+                    <h5 class="fw-bold">Bản Đồ Cứu Nạn Trực Quan</h5>
+                    <p class="text-secondary small">
+                        Xem bản đồ nhiệt các điểm ngập úng nguy cấp, vị trí các ca cần cứu hộ và danh sách trạm sơ tán, bệnh viện dã chiến gần bạn nhất.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="/map" class="btn btn-outline-danger btn-sm w-100 fw-bold">Mở Bản Đồ Số →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thẻ 2: Điểm danh an toàn -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card text-white h-100 p-4">
+                    <div class="fs-1 text-success mb-3">✅</div>
+                    <h5 class="fw-bold">Điểm Danh An Toàn</h5>
+                    <p class="text-secondary small">
+                        Bạn vừa thoát khỏi vùng ngập lụt? Khai báo ngay thông tin để người thân không phải lo lắng và lực lượng cứu hộ giảm bớt áp lực tìm kiếm.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="/relatives/checkin" class="btn btn-outline-success btn-sm w-100 fw-bold">Báo An Toàn Ngay →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thẻ 3: Tìm kiếm người thân -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card text-white h-100 p-4">
+                    <div class="fs-1 text-primary mb-3">🔍</div>
+                    <h5 class="fw-bold">Cổng Tra Cứu Thân Nhân</h5>
+                    <p class="text-secondary small">
+                        Nhập họ tên, số điện thoại hoặc quê quán để kiểm tra người thân đã được đưa đến điểm sơ tán nào, hoặc đăng tin tìm người mất liên lạc.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="/relatives/search" class="btn btn-outline-primary btn-sm w-100 fw-bold">Tra Cứu Người Thân →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thẻ 4: Cẩm nang sinh tồn -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card text-white h-100 p-4">
+                    <div class="fs-1 text-info mb-3">📖</div>
+                    <h5 class="fw-bold">Cẩm Nang Sinh Tồn Lũ Lụt</h5>
+                    <p class="text-secondary small">
+                        Kỹ năng vàng: Cách tạo tín hiệu cứu hộ khi mất sóng điện thoại, lọc nước lũ thành nước uống, sơ cứu đuối nước và an toàn lưới điện.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="/survival-guide" class="btn btn-outline-info btn-sm w-100 fw-bold">Xem Kỹ Năng →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thẻ 5: Kho hàng & Hậu cần tiếp tế -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card text-white h-100 p-4">
+                    <div class="fs-1 text-warning mb-3">🤝</div>
+                    <h5 class="fw-bold">Đăng Ký Tiếp Tế Hàng Cứu Trợ</h5>
+                    <p class="text-secondary small">
+                        Dành cho các nhà hảo tâm và đoàn thiện nguyện: Khai báo số lượng lương khô, nước sạch, áo phao để ban điều phối hướng dẫn tuyến đường tiếp cận.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="/logistics/donate" class="btn btn-outline-warning btn-sm w-100 fw-bold">Đăng Ký Tiếp Tế →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thẻ 6: Lực lượng tác chiến & Trực ban -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card text-white h-100 p-4 border-danger">
+                    <div class="fs-1 text-danger mb-3">🚤</div>
+                    <h5 class="fw-bold">Dành Cho Đội Cứu Hộ & Quản Trị</h5>
+                    <p class="text-secondary small">
+                        Cổng đăng nhập nghiệp vụ dành cho đội trưởng xuồng cano, ban chỉ đạo phòng chống lụt bão để nhận lệnh và điều phối nguồn lực thực địa.
+                    </p>
+                    <div class="mt-auto">
+                        <a href="/manager/dashboard" class="btn btn-danger btn-sm w-100 fw-bold">Vào Bàn Tác Chiến →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. FOOTER THÔNG TIN ĐƯỜNG DÂY NÓNG -->
+<footer class="bg-black text-secondary py-4 border-top border-secondary">
+    <div class="container text-center text-md-start">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <h6 class="fw-bold text-white mb-1">🚨 HỆ THỐNG ĐIỀU PHỐI CỨU NẠN THIÊN TAI QUỐC GIA</h6>
+                <small>Phát triển phục vụ công tác cứu hộ, cứu trợ đồng bào vùng thiên tai bão lũ.</small>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="text-light fw-bold">Đường dây nóng cứu hộ khẩn cấp: <span class="text-danger fs-5">112 / 114 / 115</span></div>
+                <small class="text-muted">Trực chiến 24/7 trên toàn bộ các kênh sóng vệ tinh & Internet</small>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,7 +1,6 @@
 package com.rescue.disaster.controller;
 
 import com.rescue.disaster.entity.SosRequest;
-import com.rescue.disaster.repository.RescueTeamRepository;
 import com.rescue.disaster.repository.SosRequestRepository;
 import com.rescue.disaster.service.SosService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,22 +16,17 @@ import java.util.Map;
 public class ManagerDashboardController {
 
     private final SosRequestRepository sosRequestRepository;
-    private final RescueTeamRepository rescueTeamRepository;
     private final SosService sosService;
 
     @Autowired
-    public ManagerDashboardController(SosRequestRepository sosRequestRepository,
-                                      RescueTeamRepository rescueTeamRepository,
-                                      SosService sosService) {
+    public ManagerDashboardController(SosRequestRepository sosRequestRepository, SosService sosService) {
         this.sosRequestRepository = sosRequestRepository;
-        this.rescueTeamRepository = rescueTeamRepository;
         this.sosService = sosService;
     }
 
     @GetMapping("/dashboard")
     public String showDashboard(Model model) {
         model.addAttribute("sosList", sosRequestRepository.findAllWithMedia());
-        model.addAttribute("teams", rescueTeamRepository.findByStatus("READY"));
         return "manager/dashboard";
     }
 

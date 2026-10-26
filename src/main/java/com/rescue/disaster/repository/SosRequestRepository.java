@@ -20,4 +20,13 @@ public interface SosRequestRepository extends JpaRepository<SosRequest, Long> {
 
     @Query("SELECT s FROM SosRequest s LEFT JOIN FETCH s.mediaList WHERE s.sosId = :id")
     Optional<SosRequest> findByIdWithMedia(@Param("id") Long id);
+    
+ // Lấy toàn bộ ca SOS do tài khoản cụ thể gửi
+    @Query("SELECT DISTINCT s FROM SosRequest s LEFT JOIN FETCH s.mediaList WHERE s.user.username = :username AND (s.isDeleted = false OR s.isDeleted IS NULL) ORDER BY s.createdAt DESC")
+    List<SosRequest> findAllByUsernameWithMedia(@Param("username") String username);
+    
+ // Bổ sung các phương thức đếm phục vụ Dashboard
+    long countByIsDeletedFalse();
+    long countByStatusAndIsDeletedFalse(String status);
+    long countByPriorityAndIsDeletedFalse(String priority);
 }

@@ -21,17 +21,17 @@ public class SosMedia {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sos_id", nullable = false)
-    @JsonIgnore // Ngăn vòng lặp Jackson khi tuần tự hóa JSON
+    @JsonIgnore 
     private SosRequest sosRequest;
 
     @Column(name = "media_url", nullable = false, length = 500)
     private String mediaUrl;
 
-    @Column(name = "public_id", nullable = false, length = 255)
-    private String publicId;
-
-    @Column(name = "media_type", length = 20)
+    @Column(name = "media_type", length = 30)
     private String mediaType;
+
+    @Column(name = "public_id", length = 255)
+    private String publicId;
 
     @Builder.Default
     @Column(name = "created_at")
