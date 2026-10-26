@@ -55,6 +55,15 @@ public class SecurityConfig {
                     response.sendRedirect("/auth/login?error=denied");
                 })
             )
+            // Tự động chuyển về trang login nếu chưa đăng nhập hoặc không đủ quyền
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.sendRedirect("/auth/login");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.sendRedirect("/auth/login?error=denied");
+                })
+            )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
