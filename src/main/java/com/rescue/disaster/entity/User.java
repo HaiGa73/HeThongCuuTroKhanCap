@@ -35,11 +35,13 @@ public class User {
     @Column(name = "email", length = 100)
     private String email;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = false;
 
-    // Bổ sung lưu trữ OTP
     @Column(name = "otp_code", length = 10)
     private String otpCode;
 
