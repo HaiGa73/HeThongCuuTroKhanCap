@@ -37,11 +37,16 @@ public class SecurityConfig {
 
                 // 4. Phân quyền Guest công khai
                 .requestMatchers(
-                    "/", "/sos", "/sos/**", 
-                    "/map", "/map/**", "/api/map/**",
-                    "/relatives/search", 
-                    "/survival-guide", "/survival-guide/**",
-                    "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**", "/error"
+                    "/", "/sos", "/sos/**", "/map", "/map/**", "/checkin/**", "/missing/**",
+                    "/alerts/**", // Mở quyền phát và xem cảnh báo
+                    "/survival-guide", "/survival-guide/**", // Mở quyền xem cẩm nang
+                    "/relatives/**", // <-- MỞ QUYỀN TOÀN BỘ PHÂN HỆ TRA CỨU, BÁO AN, TÌM KIẾM
+                    "/logistics/**", // Mở quyền truy cập phân hệ điều phối kho & cứu trợ
+                    "/analytics/**", // Mở quyền phân hệ Dashboard thống kê
+                    "/manager/**",
+                    "/api/**", // <-- BỔ SUNG DÒNG NÀY ĐỂ MỞ QUYỀN LẤY TỌA ĐỘ
+                    "/error", 
+                    "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**"
                 ).permitAll()
 
                 .anyRequest().authenticated()

@@ -82,7 +82,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public String handleRegister(@ModelAttribute("registerDto") RegisterRequestDto dto,
-                                 RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes) {
         try {
             authService.register(dto);
             redirectAttributes.addFlashAttribute("successMsg", "Mã xác thực OTP đã được tạo! Vui lòng nhập mã để kích hoạt.");
