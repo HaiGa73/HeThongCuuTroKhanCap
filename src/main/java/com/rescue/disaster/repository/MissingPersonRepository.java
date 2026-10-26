@@ -19,4 +19,7 @@ public interface MissingPersonRepository extends JpaRepository<MissingPerson, Lo
            "   OR LOWER(m.lastSeenLocation) LIKE LOWER(CONCAT('%', :kw, '%')) " +
            "ORDER BY m.createdAt DESC")
     List<MissingPerson> searchMissingPeople(@Param("kw") String keyword);
+    
+ // Đếm số người mất liên lạc theo trạng thái
+    long countByStatus(String status);
 }

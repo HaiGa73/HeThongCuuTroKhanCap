@@ -19,52 +19,47 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    /*
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable()) // Tắt để tiện test API; trong thực tế bật cho POST form Thymeleaf
-            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Công khai hoàn toàn cho người gặp nạn (Guest)
-                .requestMatchers(
-                    "/", "/sos", "/sos/**", "/map/**", "/checkin/**", "/missing/**",
-                    "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**"
-                ).permitAll()
-                // Phân quyền cho Manager
-                .requestMatchers("/manager/**").hasAnyRole("MANAGER", "ADMIN")
-                // Phân quyền cho Admin
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                // Các request còn lại phải đăng nhập
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }*/
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 1. Phân quyền ADMIN
+                .requestMatchers("/alerts/**", "/analytics/**").hasRole("ADMIN")
+
+                // 2. Phân quyền MANAGER & ADMIN
+                .requestMatchers("/manager/**", "/logistics/inventory", "/logistics/api/**").hasAnyRole("MANAGER", "ADMIN")
+
+                // 3. Phân quyền USER đã đăng nhập
+                .requestMatchers("/relatives/checkin", "/relatives/missing/report", "/logistics/donate").authenticated()
+
+                // 4. Phân quyền Guest công khai
                 .requestMatchers(
-                    "/", "/sos", "/sos/**", "/map", "/map/**", "/checkin/**", "/missing/**",
-                    "/alerts/**", // Mở quyền phát và xem cảnh báo
-                    "/survival-guide", "/survival-guide/**", // Mở quyền xem cẩm nang
-                    "/relatives/**", // <-- MỞ QUYỀN TOÀN BỘ PHÂN HỆ TRA CỨU, BÁO AN, TÌM KIẾM
-                    "/manager/**",
-                    "/api/**", // <-- BỔ SUNG DÒNG NÀY ĐỂ MỞ QUYỀN LẤY TỌA ĐỘ
-                    "/error", 
-                    "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**"
+                    "/", "/sos", "/sos/**", 
+                    "/map", "/map/**", "/api/map/**",
+                    "/relatives/search", 
+                    "/survival-guide", "/survival-guide/**",
+                    "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**", "/error"
                 ).permitAll()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
+
                 .anyRequest().authenticated()
+            )
+            // Tự động chuyển về trang login nếu chưa đăng nhập hoặc không đủ quyền
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.sendRedirect("/auth/login");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.sendRedirect("/auth/login?error=denied");
+                })
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
