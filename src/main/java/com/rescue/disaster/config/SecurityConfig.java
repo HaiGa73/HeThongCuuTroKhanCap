@@ -54,6 +54,7 @@ public class SecurityConfig {
                     "/survival-guide", "/survival-guide/**", // Mở quyền xem cẩm nang
                     "/relatives/**", // <-- MỞ QUYỀN TOÀN BỘ PHÂN HỆ TRA CỨU, BÁO AN, TÌM KIẾM
                     "/logistics/**", // Mở quyền truy cập phân hệ điều phối kho & cứu trợ
+                    "/analytics/**", // Mở quyền phân hệ Dashboard thống kê
                     "/manager/**",
                     "/api/**", // <-- BỔ SUNG DÒNG NÀY ĐỂ MỞ QUYỀN LẤY TỌA ĐỘ
                     "/error", 
