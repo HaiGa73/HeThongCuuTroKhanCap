@@ -50,7 +50,6 @@ public class SosService {
             }
         } catch (Exception ignored) {}
 
-        // Chuyển dấu phẩy thành dấu chấm tránh NumberFormatException
         BigDecimal lat = BigDecimal.ZERO;
         BigDecimal lng = BigDecimal.ZERO;
         try {
@@ -61,7 +60,21 @@ public class SosService {
                 lng = new BigDecimal(dto.getLongitude().trim().replace(',', '.'));
             }
         } catch (Exception e) {
-            log.warn("Lỗi parse tọa độ, dùng 0.0: {}", e.getMessage());
+            log.warn("Tọa độ rỗng hoặc sai định dạng: {}", e.getMessage());
+        }
+
+        // Tự động phân cấp ưu tiên dựa trên tình huống người dân chọn
+        String calculatedPriority = "MEDIUM";
+        String type = dto.getEmergencyType() != null ? dto.getEmergencyType() : "OTHER";
+
+        if ("INJURY_EMERGENCY".equals(type) || "ROOF_SUBMERGED".equals(type) || "LANDSLIDE_COLLAPSE".equals(type)) {
+            calculatedPriority = "CRITICAL"; // Ưu tiên số 1: Nguy hiểm tính mạng
+        } else if ("FAST_RISING_VULNERABLE".equals(type) || "FAST_FLOW_ISOLATED".equals(type)) {
+            calculatedPriority = "HIGH";     // Ưu tiên số 2: Nước dâng / cô lập
+        } else if ("OUT_OF_SUPPLIES".equals(type)) {
+            calculatedPriority = "MEDIUM";   // Cần tiếp tế
+        } else {
+            calculatedPriority = "LOW";      // Hỗ trợ di dời thường
         }
 
         SosRequest sos = SosRequest.builder()
@@ -72,13 +85,12 @@ public class SosService {
                 .longitude(lng)
                 .addressDetail(dto.getAddressDetail())
                 .numberOfPeople(dto.getNumberOfPeople() != null ? dto.getNumberOfPeople() : 1)
-                .priority(dto.getPriority() != null ? dto.getPriority() : "HIGH")
-                .description(dto.getDescription())
+                .priority(calculatedPriority)
+                .description("[" + mapTypeToText(type) + "] - " + (dto.getDescription() != null ? dto.getDescription() : ""))
                 .status("PENDING")
                 .mediaList(new ArrayList<>())
                 .build();
 
-        // Tải ảnh lên Cloudinary
         if (dto.getFiles() != null && !dto.getFiles().isEmpty()) {
             for (MultipartFile file : dto.getFiles()) {
                 if (file != null && !file.isEmpty()) {
@@ -103,22 +115,24 @@ public class SosService {
 
         SosRequest savedSos = sosRequestRepository.save(sos);
 
-        // Bắn WebSocket thông báo ca mới
         try {
             messagingTemplate.convertAndSend("/topic/manager/sos-alerts", savedSos);
-        } catch (Exception e) {
-            log.error("Lỗi gửi WebSocket: {}", e.getMessage());
-        }
+        } catch (Exception ignored) {}
 
         return savedSos;
     }
 
-    @Transactional
-    public SosRequest createSosRequest(SosCreateRequestDto dto, List<MultipartFile> files) {
-        if (files != null && !files.isEmpty()) {
-            dto.setFiles(files);
-        }
-        return createSos(dto);
+    private String mapTypeToText(String type) {
+        return switch (type) {
+            case "INJURY_EMERGENCY" -> "Có người bị thương/Đau ốm nguy kịch";
+            case "ROOF_SUBMERGED" -> "Nước ngập chạm mái/Đang trên nóc nhà";
+            case "LANDSLIDE_COLLAPSE" -> "Sạt lở đất/Sập nhà một phần";
+            case "FAST_RISING_VULNERABLE" -> "Nước dâng nhanh (Có người già, trẻ nhỏ)";
+            case "FAST_FLOW_ISOLATED" -> "Bị cô lập giữa dòng nước chảy xiết";
+            case "OUT_OF_SUPPLIES" -> "Hết lương thực, nước uống";
+            case "NEED_EVACUATION" -> "Cần hỗ trợ di dời phòng ngừa";
+            default -> "Tình huống khác";
+        };
     }
 
     @Transactional
@@ -135,7 +149,25 @@ public class SosService {
 
         return updated;
     }
+    
+    @Transactional
+    public SosRequest updateSosHandling(Long id, String newStatus, String note) {
+        SosRequest sos = sosRequestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca cứu nạn có ID: " + id));
 
+        sos.setStatus(newStatus);
+        if (note != null) {
+            sos.setManagerNote(note.trim());
+        }
+        SosRequest updated = sosRequestRepository.save(sos);
+
+        try {
+            messagingTemplate.convertAndSend("/topic/manager/sos-status-updated", updated);
+        } catch (Exception ignored) {}
+
+        return updated;
+    }
+    
     @Transactional
     public SosRequest cancelSosByUser(Long sosId, String username, String cancelReason) {
         SosRequest sos = sosRequestRepository.findById(sosId)

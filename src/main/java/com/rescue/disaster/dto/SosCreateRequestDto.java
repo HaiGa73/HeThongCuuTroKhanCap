@@ -19,7 +19,8 @@ public class SosCreateRequestDto {
     private String longitude;
     private String addressDetail;
     private Integer numberOfPeople;
-    private String priority;
+    private String emergencyType;
+    private String priority;      
     private String description;
     private List<MultipartFile> files;
 }

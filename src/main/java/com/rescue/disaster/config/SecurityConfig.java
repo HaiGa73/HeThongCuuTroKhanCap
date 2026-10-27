@@ -41,7 +41,7 @@ public class SecurityConfig {
             	        "/map", "/map/**", "/api/map/**",
             	        "/relatives/search", 
             	        "/survival-guide", "/survival-guide/**",
-            	        "/auth/**", "/css/**", "/js/**", "/images/**", "/ws-rescue/**", "/error"
+            	        "/auth/**", "/css/**", "/js/**", "/assets/**", "/images/**", "/ws-rescue/**", "/error"
             	    ).permitAll()
 
             	    .anyRequest().authenticated()

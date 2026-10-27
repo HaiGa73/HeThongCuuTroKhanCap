@@ -51,7 +51,10 @@ public class SosRequest {
     @Builder.Default
     @Column(name = "status", length = 30)
     private String status = "PENDING"; // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
-
+    
+    @Column(name = "manager_note", columnDefinition = "NVARCHAR(MAX)")
+    private String managerNote;
+    
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
 

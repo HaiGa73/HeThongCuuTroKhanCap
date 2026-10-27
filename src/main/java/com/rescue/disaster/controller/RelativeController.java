@@ -2,6 +2,8 @@ package com.rescue.disaster.controller;
 
 import com.rescue.disaster.dto.MissingPersonDto;
 import com.rescue.disaster.dto.SafeCheckinDto;
+import com.rescue.disaster.entity.MissingPerson;
+import com.rescue.disaster.entity.SafeCheckin;
 import com.rescue.disaster.repository.ShelterRepository;
 import com.rescue.disaster.service.RelativeSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,65 +12,75 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/relatives")
 public class RelativeController {
 
-    private final RelativeSearchService relativeService;
+    private final RelativeSearchService relativeSearchService;
     private final ShelterRepository shelterRepository;
 
     @Autowired
-    public RelativeController(RelativeSearchService relativeService, ShelterRepository shelterRepository) {
-        this.relativeService = relativeService;
+    public RelativeController(RelativeSearchService relativeSearchService,
+                              ShelterRepository shelterRepository) {
+        this.relativeSearchService = relativeSearchService;
         this.shelterRepository = shelterRepository;
     }
 
-    // 1. Cổng tra cứu tìm kiếm tập trung
+    // 1. Cổng tra cứu tìm kiếm thân nhân
     @GetMapping("/search")
-    public String showSearchPortal(@RequestParam(value = "keyword", required = false) String keyword,
-                                   @RequestParam(value = "tab", defaultValue = "safe") String tab,
-                                   Model model) {
+    public String searchRelatives(@RequestParam(value = "keyword", required = false) String keyword, Model model) {
+        // Tận dụng 2 hàm có sẵn trong RelativeSearchService
+        List<SafeCheckin> safeList = relativeSearchService.searchSafe(keyword);
+        List<MissingPerson> missingList = relativeSearchService.searchMissing(keyword);
+
+        model.addAttribute("safeCheckins", safeList);
+        model.addAttribute("missingReports", missingList);
         model.addAttribute("keyword", keyword);
-        model.addAttribute("activeTab", tab);
-        model.addAttribute("safeList", relativeService.searchSafe(keyword));
-        model.addAttribute("missingList", relativeService.searchMissing(keyword));
         return "guest/relatives-search";
     }
 
-    // 2. Giao diện điểm danh an toàn
+    // 2. Form điểm danh an toàn
     @GetMapping("/checkin")
     public String showCheckinForm(Model model) {
-        if (!model.containsAttribute("checkinDto")) {
-            model.addAttribute("checkinDto", new SafeCheckinDto());
-        }
-        model.addAttribute("shelters", shelterRepository.findByIsActiveTrue());
+        SafeCheckinDto dto = new SafeCheckinDto();
+        model.addAttribute("checkinDto", dto);
+        model.addAttribute("safeCheckinDto", dto);
+        model.addAttribute("shelters", shelterRepository.findAll());
         return "guest/checkin-form";
     }
 
-    // Xử lý gửi báo an
     @PostMapping("/checkin")
-    public String handleCheckin(@ModelAttribute("checkinDto") SafeCheckinDto dto,
-                                RedirectAttributes redirectAttributes) {
-        relativeService.saveCheckin(dto);
-        redirectAttributes.addFlashAttribute("successMsg", "Khai báo an toàn thành công! Người thân đã có thể tra cứu thấy bạn.");
-        return "redirect:/relatives/search?tab=safe";
+    public String handleCheckin(@ModelAttribute("checkinDto") SafeCheckinDto dto, RedirectAttributes redirectAttributes) {
+        try {
+            // Gọi hàm saveCheckin có sẵn trong RelativeSearchService
+            relativeSearchService.saveCheckin(dto);
+            redirectAttributes.addFlashAttribute("successMsg", "Điểm danh an toàn thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMsg", "Lỗi: " + e.getMessage());
+        }
+        return "redirect:/relatives/search";
     }
 
-    // 3. Giao diện đăng tin tìm người
+    // 3. Form đăng tin tìm người mất tích
     @GetMapping("/missing/report")
     public String showMissingReportForm(Model model) {
-        if (!model.containsAttribute("missingDto")) {
-            model.addAttribute("missingDto", new MissingPersonDto());
-        }
+        MissingPersonDto dto = new MissingPersonDto();
+        model.addAttribute("missingDto", dto);
+        model.addAttribute("missingPersonDto", dto);
         return "guest/missing-report-form";
     }
 
-    // Xử lý gửi tin tìm kiếm
     @PostMapping("/missing/report")
-    public String handleMissingReport(@ModelAttribute("missingDto") MissingPersonDto dto,
-                                      RedirectAttributes redirectAttributes) {
-        relativeService.saveMissingReport(dto);
-        redirectAttributes.addFlashAttribute("successMsg", "Đã đăng tải tin tìm kiếm người thân lên hệ thống ứng cứu!");
-        return "redirect:/relatives/search?tab=missing";
+    public String handleMissingReport(@ModelAttribute("missingDto") MissingPersonDto dto, RedirectAttributes redirectAttributes) {
+        try {
+            // Gọi hàm saveMissingReport có sẵn trong RelativeSearchService
+            relativeSearchService.saveMissingReport(dto);
+            redirectAttributes.addFlashAttribute("successMsg", "Đã đăng tin tìm kiếm thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMsg", "Lỗi khi lưu tin: " + e.getMessage());
+        }
+        return "redirect:/relatives/search";
     }
 }

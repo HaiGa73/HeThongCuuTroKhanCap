@@ -1,178 +1,238 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Điều Phối Kho Nhu Yếu Phẩm Dã Chiến</title>
+    <title>Quản Lý Kho Hàng & Vật Phẩm Cứu Trợ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8fafc; font-family: 'Roboto', sans-serif; color: #1e293b; }
+        .navbar-brand { font-weight: 800; color: #dc3545 !important; letter-spacing: 0.5px; }
+        .nav-link { font-weight: 600; font-size: 0.95rem; color: #334155 !important; }
+        .nav-link:hover { color: #dc3545 !important; }
+        .card-stat {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .table-card {
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        }
+    </style>
 </head>
-<body class="bg-dark text-white">
+<body>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-secondary">
-    <div class="container-fluid">
-        <a class="navbar-brand fw-bold text-warning" href="/">📦 HẬU CẦN & TIẾP TẾ CỨU NẠN</a>
-        <div class="navbar-nav ms-auto gap-2">
-            <a class="btn btn-outline-light btn-sm" href="/logistics/donate">🤝 Đăng ký tiếp tế</a>
-            <a class="btn btn-outline-info btn-sm" href="/map">🗺️ Bản đồ cứu nạn</a>
-            <a class="btn btn-primary btn-sm" href="/manager/dashboard">🚨 Dashboard Tác Chiến</a>
+<!-- THANH NAVBAR ĐỒNG BỘ CHUẨN PHÂN QUYỀN -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top py-3" id="mainNav">
+    <div class="container px-4 px-lg-5">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+            <i class="bi bi-broadcast text-danger fs-3"></i>
+            <span>CỨU NẠN THIÊN TAI</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <!-- 1. Thanh menu ngang: Chỉ giữ đúng 4 mục dân sinh công khai duy nhất -->
+            <ul class="navbar-nav ms-auto my-2 my-lg-0 align-items-center gap-1">
+                <li class="nav-item"><a class="nav-link" href="/map">Bản Đồ Cứu Nạn</a></li>
+                <li class="nav-item"><a class="nav-link" href="/relatives/search">Tìm Thân Nhân</a></li>
+                <li class="nav-item"><a class="nav-link" href="/survival-guide">Cẩm Nang Sinh Tồn</a></li>
+                <li class="nav-item"><a class="nav-link" href="/logistics/donate">Tiếp Tế Cứu Trợ</a></li>
+                
+                <!-- Khi chưa đăng nhập (GUEST) -->
+                <li th:if="${!isAuthenticated}" class="nav-item ms-lg-2">
+                    <a class="btn btn-outline-danger btn-sm px-3 fw-bold rounded-pill" href="/auth/login">Đăng Nhập</a>
+                </li>
+                <li th:if="${!isAuthenticated}" class="nav-item ms-lg-1">
+                    <a class="btn btn-danger btn-sm px-3 fw-bold rounded-pill text-white" href="/auth/register">Đăng Ký</a>
+                </li>
+
+                <!-- 2. Menu Profile Dropdown: Tự động phân cấp theo Role -->
+                <li th:if="${isAuthenticated}" class="nav-item dropdown ms-lg-2">
+                    <a class="btn btn-light btn-sm dropdown-toggle rounded-pill px-3 fw-bold border shadow-sm" 
+                       href="#" id="userDrop" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle text-danger me-1"></i>
+                        <span th:text="${currentUsername}">User</span>
+                    </a>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <!-- Mọi tài khoản (User, Manager, Admin) đều thấy 2 mục này -->
+                        <li>
+                            <a class="dropdown-item" href="/user/my-sos">
+                                <i class="bi bi-activity text-danger me-2"></i>Ca cứu nạn của tôi
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/user/profile">
+                                <i class="bi bi-person-gear text-primary me-2"></i>Hồ sơ cá nhân
+                            </a>
+                        </li>
+
+                        <!-- Dành riêng cho MANAGER và ADMIN -->
+                        <li th:if="${isManager or isAdmin}"><hr class="dropdown-divider"></li>
+                        <li th:if="${isManager or isAdmin}">
+                            <a class="dropdown-item text-primary fw-bold" href="/manager/dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i>Bảng Tác Chiến Manager
+                            </a>
+                        </li>
+                        <li th:if="${isManager or isAdmin}">
+                            <a class="dropdown-item text-success fw-bold" href="/logistics/inventory">
+                                <i class="bi bi-boxes me-2"></i>Quản Lý Kho Vật Phẩm
+                            </a>
+                        </li>
+
+                        <!-- Dành riêng cho ADMIN -->
+                        <li th:if="${isAdmin}">
+                            <a class="dropdown-item text-warning fw-bold" href="/analytics/dashboard">
+                                <i class="bi bi-pie-chart-fill me-2"></i>Thống Kê Ban Chỉ Đạo
+                            </a>
+                        </li>
+
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="/auth/logout">
+                                <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>
 
-<div class="container py-4">
-    <div class="row align-items-center mb-4">
-        <div class="col-md-7">
-            <h4 class="fw-bold mb-1 text-warning">KHO HÀNG CỨU TRỢ & VẬT TƯ DÃ CHIẾN</h4>
-            <p class="text-secondary mb-0 small">Theo dõi tồn kho thực tế để phân phối lương thực, nước sạch và trang bị cứu sinh.</p>
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">📦 ĐIỀU PHỐI VẬT PHẨM & KHO HÀNG CỨU TRỢ</h3>
+            <p class="text-muted small mb-0">Theo dõi lượng nhu yếu phẩm (lương khô, nước sạch, áo phao, thuốc men) phân bổ đến các trạm sơ tán.</p>
         </div>
-        <div class="col-md-5">
-            <form method="get" th:action="@{/logistics/inventory}" class="d-flex align-items-center gap-2">
-                <label class="fw-bold text-nowrap small">Chọn Kho:</label>
-                <select name="warehouseId" class="form-select bg-secondary text-white border-0" onchange="this.form.submit()">
-                    <option th:each="w : ${warehouses}" th:value="${w.warehouseId}" th:text="${w.name}"
-                            th:selected="${w.warehouseId == selectedWarehouseId}"></option>
-                </select>
-            </form>
+        <a href="/logistics/donate" class="btn btn-danger btn-sm fw-bold px-3 rounded-pill shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Đăng Ký Đợt Tiếp Tế Mới
+        </a>
+    </div>
+
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center" role="alert">
+        <span th:text="${successMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- 4 Khối Thống Kê Số Lượng -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-stat border-start border-4 border-primary">
+                <small class="text-muted fw-bold text-uppercase">Tổng Số Lô Hàng</small>
+                <h3 class="fw-bold text-dark my-1" th:text="${totalShipments}">0</h3>
+                <small class="text-primary">Đã đăng ký cứu trợ</small>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-stat border-start border-4 border-warning">
+                <small class="text-muted fw-bold text-uppercase">Chờ Tiếp Nhận</small>
+                <h3 class="fw-bold text-warning my-1" th:text="${pendingShipments}">0</h3>
+                <small class="text-muted">Đang chuẩn bị hàng</small>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-stat border-start border-4 border-info">
+                <small class="text-muted fw-bold text-uppercase">Đang Vận Chuyển</small>
+                <h3 class="fw-bold text-info my-1" th:text="${inTransitShipments}">0</h3>
+                <small class="text-muted">Xe/cano đang di chuyển</small>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-stat border-start border-4 border-success">
+                <small class="text-muted fw-bold text-uppercase">Đã Nhập Kho / Phát Hết</small>
+                <h3 class="fw-bold text-success my-1" th:text="${completedShipments}">0</h3>
+                <small class="text-muted">Đã đến tay người dân</small>
+            </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- Bảng danh sách tồn kho -->
-        <div class="col-lg-8">
-            <div class="card bg-secondary text-white shadow">
-                <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-                    <span>Tồn Kho Theo Thời Gian Thực</span>
-                    <span class="badge bg-dark text-info">Cập nhật tự động</span>
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-dark table-hover table-bordered mb-0 align-middle">
-                        <thead>
-                            <tr class="text-center">
-                                <th>Danh mục vật tư</th>
-                                <th style="width: 110px;">Phân loại</th>
-                                <th style="width: 100px;">Đơn vị</th>
-                                <th style="width: 110px;">Số lượng</th>
-                                <th style="width: 170px;">Thao tác nhanh</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:if="${inventories == null or inventories.isEmpty()}">
-                                <td colspan="5" class="text-center text-muted py-4">Kho này hiện chưa có dữ liệu tồn kho.</td>
-                            </tr>
-                            <tr th:each="inv : ${inventories}" th:id="'inv-row-' + ${inv.supply.supplyId}">
-                                <td><strong th:text="${inv.supply.name}">Lương khô</strong></td>
-                                <td class="text-center">
-                                    <span class="badge" th:classappend="${inv.supply.category == 'FOOD' ? 'bg-warning text-dark' : (inv.supply.category == 'WATER' ? 'bg-primary' : (inv.supply.category == 'MEDICAL' ? 'bg-danger' : 'bg-info text-dark'))}"
-                                          th:text="${inv.supply.category}">FOOD</span>
-                                </td>
-                                <td class="text-center small" th:text="${inv.supply.unit}">Thùng</td>
-                                <td class="text-center">
-                                    <span th:id="'qty-' + ${inv.supply.supplyId}" class="fs-5 fw-bold"
-                                          th:classappend="${inv.quantity < 50 ? 'text-danger' : 'text-success'}"
-                                          th:text="${inv.quantity}">100</span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-success fw-bold" 
-                                                th:onclick="'quickAdjust(' + ${inv.supply.supplyId} + ', 10)'">+10 Nhập</button>
-                                        <button class="btn btn-outline-danger fw-bold" 
-                                                th:onclick="'quickAdjust(' + ${inv.supply.supplyId} + ', -10)'">-10 Xuất</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <!-- Bảng Danh Sách Nhu Yếu Phẩm & Lô Hàng -->
+    <div class="table-card">
+        <div class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">Danh Sách Nhu Yếu Phẩm & Chuyến Hàng Hỗ Trợ</h5>
+            <span class="badge bg-light text-dark border">Cập nhật tự động</span>
         </div>
-
-        <!-- Form Nhập / Xuất Kho Tùy Chỉnh -->
-        <div class="col-lg-4">
-            <div class="card bg-secondary text-white shadow border-warning">
-                <div class="card-header bg-warning text-dark fw-bold">
-                    <h6 class="mb-0">📝 LẬP PHIẾU NHẬP / XUẤT KHO</h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Vật tư thao tác:</label>
-                        <select id="customSupplyId" class="form-select bg-dark text-white border-0">
-                            <option th:each="s : ${supplies}" th:value="${s.supplyId}" th:text="${s.name} + ' (' + ${s.unit} + ')'"></option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Loại nghiệp vụ:</label>
-                        <select id="adjustType" class="form-select bg-dark text-white border-0">
-                            <option value="IMPORT">📥 Tiếp nhận hàng mới (Nhập kho)</option>
-                            <option value="EXPORT">📤 Chuyển cho cano cứu nạn (Xuất kho)</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Số lượng thay đổi:</label>
-                        <input type="number" id="customAmount" class="form-control bg-dark text-white border-0" value="50" min="1">
-                    </div>
-
-                    <button type="button" class="btn btn-warning w-100 fw-bold shadow py-2" onclick="submitCustomAdjust()">
-                        Xác Nhận Cập Nhật Kho
-                    </button>
-                </div>
-            </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 70px;" class="text-center">Mã</th>
+                        <th>Đoàn Cứu Trợ / Nhà Hảo Tâm</th>
+                        <th>Loại Vật Phẩm & Số Lượng</th>
+                        <th>Điểm Sơ Tán Đón Nhận</th>
+                        <th style="width: 140px;" class="text-center">Trạng Thái</th>
+                        <th style="width: 200px;" class="text-center">Thao Tác Điều Phối</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${donations == null or donations.isEmpty()}">
+                        <td colspan="6" class="text-center text-muted py-5">
+                            Chưa có dữ liệu lô hàng cứu trợ nào được nhập kho.
+                        </td>
+                    </tr>
+                    <tr th:each="d : ${donations}">
+                        <td class="text-center fw-bold text-secondary" th:text="'#' + ${d.donationId}">#1</td>
+                        <td>
+                            <strong class="text-dark" th:text="${d.donorName}">Tên người gửi</strong>
+                            <div class="small text-muted" th:if="${d.organization != null and !d.organization.isEmpty()}" th:text="${d.organization}">Tổ chức</div>
+                            <small><a th:href="'tel:' + ${d.phoneNumber}" class="text-decoration-none fw-bold" th:text="${d.phoneNumber}">090...</a></small>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-danger fs-6" th:text="${d.supplyType}">Áo phao, Lương khô</div>
+                            <div class="small text-secondary" th:text="${d.quantityDetail}">100 cái, 50 thùng</div>
+                            <small class="text-muted fst-italic" th:if="${d.note != null and !d.note.isEmpty()}" th:text="'Ghi chú: ' + ${d.note}"></small>
+                        </td>
+                        <td>
+                            <span th:if="${d.destinationShelter != null}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-6">
+                                🏡 <span th:text="${d.destinationShelter.name}">Trạm A</span>
+                            </span>
+                            <span th:if="${d.destinationShelter == null}" class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                Phân bổ tự do
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-3 py-2"
+                                  th:classappend="${d.status == 'REGISTERED' ? 'bg-warning text-dark' : (d.status == 'EN_ROUTE' ? 'bg-info text-dark' : 'bg-success')}"
+                                  th:text="${d.status == 'REGISTERED' ? '⏳ Chờ tiếp nhận' : (d.status == 'EN_ROUTE' ? '🚚 Đang giao' : '✅ Đã nhập kho')}">
+                                REGISTERED
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <form th:action="@{'/logistics/shipment/' + ${d.donationId} + '/status'}" method="post" class="d-inline-flex gap-1">
+                                <button type="submit" name="status" value="EN_ROUTE" class="btn btn-outline-primary btn-sm fw-bold rounded-pill" title="Xuất phát giao">
+                                    🚚 Đang đi
+                                </button>
+                                <button type="submit" name="status" value="DELIVERED" class="btn btn-outline-success btn-sm fw-bold rounded-pill" title="Xác nhận đã nhập kho">
+                                    ✅ Đã nhận
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    const currentWarehouseId = /*[[${selectedWarehouseId}]]*/ null;
+<footer class="bg-white text-muted py-3 border-top text-center small mt-5">
+    Hệ Thống Quản Lý Kho & Nhu Yếu Phẩm Cứu Trợ Quốc Gia
+</footer>
 
-    function quickAdjust(supplyId, amount) {
-        if (!currentWarehouseId) return;
-        callAdjustApi(currentWarehouseId, supplyId, amount);
-    }
-
-    function submitCustomAdjust() {
-        const supplyId = document.getElementById('customSupplyId').value;
-        const type = document.getElementById('adjustType').value;
-        const rawAmount = parseInt(document.getElementById('customAmount').value);
-
-        if (!rawAmount || rawAmount <= 0) {
-            alert('Vui lòng nhập số lượng hợp lệ lớn hơn 0!');
-            return;
-        }
-
-        const amount = (type === 'EXPORT') ? -rawAmount : rawAmount;
-        callAdjustApi(currentWarehouseId, supplyId, amount);
-    }
-
-    function callAdjustApi(warehouseId, supplyId, amount) {
-        fetch('/logistics/api/stock-adjust', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                warehouseId: warehouseId,
-                supplyId: supplyId,
-                amount: amount
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'SUCCESS') {
-                const qtySpan = document.getElementById('qty-' + supplyId);
-                if (qtySpan) {
-                    qtySpan.innerText = data.newQuantity;
-                    qtySpan.className = 'fs-5 fw-bold ' + (data.newQuantity < 50 ? 'text-danger' : 'text-success');
-                } else {
-                    location.reload();
-                }
-            } else {
-                alert('Lỗi: ' + data.message);
-            }
-        })
-        .catch(err => alert('Lỗi kết nối máy chủ: ' + err));
-    }
-    /*]]>*/
-</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

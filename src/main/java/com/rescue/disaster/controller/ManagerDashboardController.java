@@ -39,12 +39,17 @@ public class ManagerDashboardController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // API cập nhật trạng thái nhiệm vụ
+    // API cập nhật phương án xử lý và giải thích chi tiết
     @PostMapping("/api/sos/{id}/status")
     @ResponseBody
     public ResponseEntity<?> changeStatus(@PathVariable("id") Long id, @RequestBody Map<String, String> body) {
         String newStatus = body.get("status");
-        SosRequest updated = sosService.updateSosStatus(id, newStatus);
-        return ResponseEntity.ok(Map.of("message", "Đã cập nhật trạng thái", "status", updated.getStatus()));
+        String note = body.get("note");
+        SosRequest updated = sosService.updateSosHandling(id, newStatus, note);
+        return ResponseEntity.ok(Map.of(
+                "message", "Đã cập nhật phương án xử lý",
+                "status", updated.getStatus(),
+                "managerNote", updated.getManagerNote() != null ? updated.getManagerNote() : ""
+        ));
     }
 }

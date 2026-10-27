@@ -1,199 +1,550 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Báo Cáo & Thống Kê Tác Chiến Cứu Nạn</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <title>Trung Tâm Chỉ Huy Tác Chiến - CoreUI Admin</title>
+
+    <!-- CoreUI CSS & Bootstrap Icons CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.1.2/dist/css/coreui.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        .kpi-card { border-radius: 10px; border: none; }
-        .chart-box { background: #2b3035; border-radius: 10px; padding: 20px; }
+        :root {
+            --cui-sidebar-bg: #212631;
+            --cui-sidebar-color: rgba(255, 255, 255, 0.8);
+        }
+        body {
+            background-color: #f3f4f7;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* 1. CoreUI Sidebar Trái */
+        .admin-sidebar {
+            width: 256px;
+            background: #212631;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1030;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-brand {
+            height: 64px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 1.25rem;
+            color: #ffffff;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .sidebar-nav {
+            list-style: none;
+            padding: 0.75rem 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .nav-title {
+            padding: 0.75rem 1.25rem 0.25rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.8px;
+        }
+        .sidebar-nav .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.7rem 1.25rem;
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+        .sidebar-nav .nav-link:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .sidebar-nav .nav-link.active {
+            color: #ffffff;
+            background: #321fdb;
+            font-weight: 600;
+        }
+        .sidebar-nav .nav-link i {
+            font-size: 1.15rem;
+            margin-right: 0.85rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* 2. Main Wrapper */
+        .main-wrapper {
+            margin-left: 256px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.25s ease;
+        }
+
+        /* 3. Top Header */
+        .admin-header {
+            height: 64px;
+            background: #ffffff;
+            border-bottom: 1px solid #d8dbe0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+
+        /* 4. CoreUI Widgets Dropdown Cards */
+        .widget-card {
+            border: 0;
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 1.25rem;
+            position: relative;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+        .widget-primary { background: linear-gradient(45deg, #321fdb 0%, #1f1498 100%); }
+        .widget-danger  { background: linear-gradient(45deg, #e55353 0%, #d93737 100%); }
+        .widget-success { background: linear-gradient(45deg, #2eb85c 0%, #1b9e47 100%); }
+        .widget-info    { background: linear-gradient(45deg, #39f 0%, #2982cc 100%); }
+        
+        .widget-card .widget-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.35rem;
+        }
+        .widget-card .widget-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        .widget-icon-bg {
+            position: absolute;
+            right: 15px;
+            bottom: 10px;
+            font-size: 3.5rem;
+            opacity: 0.18;
+            pointer-events: none;
+        }
+
+        /* 5. CoreUI Main Card */
+        .coreui-card {
+            background: #ffffff;
+            border: 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            margin-bottom: 1.5rem;
+        }
+        .coreui-card-header {
+            background: transparent;
+            border-bottom: 1px solid #ebedef;
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 992px) {
+            .admin-sidebar { margin-left: -256px; }
+            .admin-sidebar.show { margin-left: 0; }
+            .main-wrapper { margin-left: 0; }
+        }
     </style>
 </head>
-<body class="bg-dark text-white">
+<body>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-secondary">
-    <div class="container-fluid">
-        <a class="navbar-brand fw-bold text-danger" href="/">📊 THỐNG KÊ & BÁO CÁO TÁC CHIẾN</a>
-        <div class="navbar-nav ms-auto gap-2">
-            <a class="btn btn-outline-light btn-sm" href="/map">🗺️ Bản đồ cứu nạn</a>
-            <a class="btn btn-warning btn-sm" href="/logistics/inventory">📦 Kho hàng cứu trợ</a>
-            <a class="btn btn-primary btn-sm" href="/manager/dashboard">🚨 Điều phối cứu hộ</a>
-        </div>
-    </div>
-</nav>
+    <!-- SIDEBAR BÊN TRÁI CHUẨN COREUI ADMIN -->
+    <aside class="admin-sidebar" id="adminSidebar">
+        <a class="sidebar-brand" href="/">
+            <i class="bi bi-shield-shaded text-danger fs-3 me-2"></i>
+            <span>CỨU NẠN THIÊN TAI</span>
+        </a>
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-0 text-info">TRUNG TÂM PHÂN TÍCH & BÁO CÁO THIÊN TAI</h4>
-            <small class="text-secondary">Dữ liệu tổng hợp theo thời gian thực phục vụ Ban chỉ đạo</small>
-        </div>
-        <button class="btn btn-outline-info btn-sm" onclick="location.reload()">🔄 Cập nhật dữ liệu</button>
-    </div>
+        <ul class="sidebar-nav">
+            <li class="nav-title">Trung Tâm Tác Chiến</li>
+            <li>
+                <a class="nav-link active" href="/analytics/dashboard">
+                    <i class="bi bi-speedometer2"></i> Dashboard Thống Kê
+                </a>
+            </li>
+            <li>
+                <a class="nav-link" href="/manager/dashboard">
+                    <i class="bi bi-broadcast"></i> Trực Ban Cano SOS
+                </a>
+            </li>
+            <li>
+                <a class="nav-link" href="/map">
+                    <i class="bi bi-geo-alt-fill"></i> Bản Đồ Vùng Ngập Lụt
+                </a>
+            </li>
 
-    <!-- Hàng 1: Thẻ KPI Tổng Hợp -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-secondary text-white shadow kpi-card">
-                <div class="card-body">
-                    <span class="text-secondary small fw-bold">TỔNG SỐ CA TIẾP NHẬN</span>
-                    <h2 class="fw-bold text-warning mb-0" th:text="${summary.totalSos}">0</h2>
-                    <small class="text-muted">Toàn bộ tín hiệu cầu cứu</small>
+            <li class="nav-title">Phục Vụ Dân Sinh</li>
+            <li>
+                <a class="nav-link" href="/relatives/search">
+                    <i class="bi bi-people-fill"></i> Tra Cứu Thân Nhân
+                </a>
+            </li>
+            <li>
+                <a class="nav-link" href="/logistics/donate">
+                    <i class="bi bi-box2-heart-fill"></i> Kho Hàng & Tiếp Tế
+                </a>
+            </li>
+            <li>
+                <a class="nav-link" href="/survival-guide">
+                    <i class="bi bi-journal-text"></i> Cẩm Nang Sinh Tồn
+                </a>
+            </li>
+
+            <li class="nav-title">Quản Trị Hệ Thống</li>
+            <li>
+                <a class="nav-link" href="/">
+                    <i class="bi bi-house-door"></i> Xem Trang Chủ Web
+                </a>
+            </li>
+            <li>
+                <a class="nav-link" href="/user/profile">
+                    <i class="bi bi-person-gear"></i> Tài Khoản Admin
+                </a>
+            </li>
+            <li>
+                <a class="nav-link text-danger" href="/auth/logout">
+                    <i class="bi bi-box-arrow-right"></i> Đăng Xuất
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- NỘI DUNG CHÍNH (MAIN WRAPPER) -->
+    <div class="main-wrapper">
+        
+        <!-- HEADER TRÊN CÙNG -->
+        <header class="admin-header">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-light btn-sm border d-lg-none" type="button" onclick="toggleSidebar()">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0 small">
+                        <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Trang chủ</a></li>
+                        <li class="breadcrumb-item"><a href="/analytics/dashboard" class="text-decoration-none text-muted">Ban Chỉ Đạo</a></li>
+                        <li class="breadcrumb-item active text-dark fw-bold">Phân Tích & Báo Cáo</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill small fw-bold">
+                    <i class="bi bi-circle-fill fs-6 me-1 text-success"></i> Trực Ban Chỉ Huy 24/7
+                </span>
+
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border rounded-pill px-3 dropdown-toggle fw-bold d-flex align-items-center gap-2" 
+                            type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle text-danger"></i>
+                        <span th:text="${currentUsername ?: 'Admin'}">Admin</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <li><a class="dropdown-item" href="/user/profile"><i class="bi bi-person me-2"></i>Hồ sơ quản trị</a></li>
+                        <li><a class="dropdown-item" href="/manager/dashboard"><i class="bi bi-speedometer2 me-2"></i>Bàn tác chiến cano</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+                    </ul>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="col-md-3">
-            <div class="card bg-secondary text-white shadow kpi-card">
-                <div class="card-body">
-                    <span class="text-danger small fw-bold">ĐANG CHỜ ỨNG CỨU (PENDING)</span>
-                    <h2 class="fw-bold text-danger mb-0" th:text="${summary.pendingSos}">0</h2>
-                    <small class="text-muted">Cần bố trí cano tiếp cận ngay</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card bg-secondary text-white shadow kpi-card">
-                <div class="card-body">
-                    <span class="text-success small fw-bold">GIẢI CỨU THÀNH CÔNG</span>
-                    <h2 class="fw-bold text-success mb-0" th:text="${summary.completedSos}">0</h2>
-                    <small class="text-muted">Đã đưa về điểm an toàn</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card bg-secondary text-white shadow kpi-card">
-                <div class="card-body">
-                    <span class="text-info small fw-bold">ĐÃ ĐIỂM DANH AN TOÀN</span>
-                    <h2 class="fw-bold text-info mb-0" th:text="${summary.totalSafeCheckins}">0</h2>
-                    <small class="text-muted">Nạn nhân tự khai báo an toàn</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hàng 2: Biểu Đồ Trực Quan Hóa -->
-    <div class="row g-4 mb-4">
-        <!-- Biểu đồ tròn: Trạng thái xử lý -->
-        <div class="col-lg-5">
-            <div class="chart-box shadow h-100">
-                <h6 class="fw-bold text-warning mb-3">Tỷ Lệ Xử Lý Ca Cứu Nạn</h6>
-                <div style="height: 280px; position: relative;">
-                    <canvas id="statusChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Biểu đồ cột: Phân bổ mức độ nguy cấp -->
-        <div class="col-lg-7">
-            <div class="chart-box shadow h-100">
-                <h6 class="fw-bold text-info mb-3">Phân Bổ Ca SOS Theo Mức Độ Ưu Tiên</h6>
-                <div style="height: 280px; position: relative;">
-                    <canvas id="priorityChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hàng 3: Bảng Tóm Tắt Tình Hình Tìm Thân Nhân -->
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="card bg-secondary text-white shadow">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-danger fw-bold mb-1">Hồ sơ người thân đang mất liên lạc:</h6>
-                        <small class="text-secondary">Đang được các lực lượng tìm kiếm</small>
+        <!-- CONTAINER NỘI DUNG DASHBOARD -->
+        <main class="p-4">
+            
+            <!-- 1. HÀNG 4 WIDGETS DROPDOWN CHUẨN COREUI -->
+            <div class="row g-3 mb-4">
+                <!-- Widget 1: Tổng Ca SOS (Primary Blue) -->
+                <div class="col-sm-6 col-xl-3">
+                    <div class="widget-card widget-primary">
+                        <div class="widget-value" th:text="${summary.totalSos}">0</div>
+                        <div class="widget-label">Tổng Số Ca Cứu Nạn SOS</div>
+                        <small class="opacity-75">Tín hiệu ghi nhận từ toàn vùng lũ</small>
+                        <i class="bi bi-broadcast widget-icon-bg"></i>
                     </div>
-                    <span class="badge bg-danger fs-5" th:text="${summary.searchingMissingPersons} + ' người'">0</span>
                 </div>
-            </div>
-        </div>
 
-        <div class="col-md-6">
-            <div class="card bg-secondary text-white shadow">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-success fw-bold mb-1">Người thân đã tìm thấy / đoàn tụ:</h6>
-                        <small class="text-secondary">Đã đối soát thông tin an toàn</small>
+                <!-- Widget 2: Chờ Tiếp Cận (Danger Red) -->
+                <div class="col-sm-6 col-xl-3">
+                    <div class="widget-card widget-danger">
+                        <div class="widget-value" th:text="${summary.pendingSos}">0</div>
+                        <div class="widget-label">Đang Chờ Ứng Cứu (PENDING)</div>
+                        <small class="opacity-75">Cần bố trí cano tiếp cận ngay</small>
+                        <i class="bi bi-exclamation-triangle widget-icon-bg"></i>
                     </div>
-                    <span class="badge bg-success fs-5" th:text="${summary.foundMissingPersons} + ' người'">0</span>
+                </div>
+
+                <!-- Widget 3: Giải Cứu Thành Công (Success Green) -->
+                <div class="col-sm-6 col-xl-3">
+                    <div class="widget-card widget-success">
+                        <div class="widget-value" th:text="${summary.completedSos}">0</div>
+                        <div class="widget-label">Đã Giải Cứu An Toàn</div>
+                        <small class="opacity-75">Đưa về điểm sơ tán an toàn</small>
+                        <i class="bi bi-check-circle widget-icon-bg"></i>
+                    </div>
+                </div>
+
+                <!-- Widget 4: Điểm Danh An Toàn (Info Cyan) -->
+                <div class="col-sm-6 col-xl-3">
+                    <div class="widget-card widget-info">
+                        <div class="widget-value" th:text="${summary.safeCheckinsCount}">0</div>
+                        <div class="widget-label">Đã Điểm Danh An Toàn</div>
+                        <small class="opacity-75">Công dân tự khai báo trực tuyến</small>
+                        <i class="bi bi-person-check widget-icon-bg"></i>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- 2. BIỂU ĐỒ CHỦ LỰC (MAIN CHART CARD) -->
+            <div class="coreui-card">
+                <div class="coreui-card-header">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark">Tiến Độ Điều Phối & Giải Cứu Thực Địa</h5>
+                        <small class="text-muted">Giám sát năng lực tiếp cận và xử lý ca khẩn cấp theo thời gian thực</small>
+                    </div>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary active">Thời gian thực</button>
+                        <button type="button" class="btn btn-outline-secondary">Hôm nay</button>
+                        <button type="button" class="btn btn-outline-secondary">Tuần này</button>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="mainRescueChart"></canvas>
+                    </div>
+                </div>
+                <div class="card-footer bg-light p-3 border-top">
+                    <div class="row text-center g-3">
+                        <div class="col-sm-6 col-md-3 border-end">
+                            <span class="text-muted small">Cực kỳ nguy cấp (CRITICAL)</span>
+                            <div class="fw-bold fs-5 text-danger" th:text="${summary.criticalPriority}">0</div>
+                        </div>
+                        <div class="col-sm-6 col-md-3 border-end">
+                            <span class="text-muted small">Nguy cấp cao (HIGH)</span>
+                            <div class="fw-bold fs-5 text-warning" th:text="${summary.highPriority}">0</div>
+                        </div>
+                        <div class="col-sm-6 col-md-3 border-end">
+                            <span class="text-muted small">Trung bình (MEDIUM)</span>
+                            <div class="fw-bold fs-5 text-info" th:text="${summary.mediumPriority}">0</div>
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <span class="text-muted small">Hỗ trợ di dời (LOW)</span>
+                            <div class="fw-bold fs-5 text-secondary" th:text="${summary.lowPriority}">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. HAI BIỂU ĐỒ PHÂN BỔ (ROW 2) -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="coreui-card h-100">
+                        <div class="coreui-card-header">
+                            <h6 class="fw-bold mb-0 text-dark">Tỷ Lệ Xử Lý Theo Trạng Thái</h6>
+                            <span class="badge bg-primary">Doughnut</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div style="height: 280px; position: relative;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="coreui-card h-100">
+                        <div class="coreui-card-header">
+                            <h6 class="fw-bold mb-0 text-dark">Phân Bổ Ca SOS Theo Mức Độ Khẩn Cấp</h6>
+                            <span class="badge bg-danger">Bar Chart</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div style="height: 280px; position: relative;">
+                                <canvas id="priorityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. THÔNG TIN THÂN NHÂN -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="coreui-card p-3 border-start border-4 border-danger">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold text-danger mb-1">Hồ Sơ Thân Nhân Đang Mất Liên Lạc</h6>
+                                <small class="text-muted">Các tin báo mất tích được cộng đồng gửi về</small>
+                            </div>
+                            <span class="badge bg-danger fs-5 px-3 py-2 rounded-pill" th:text="${summary.missingPersonsCount} + ' người'">0 người</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="coreui-card p-3 border-start border-4 border-success">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold text-success mb-1">Người Thân Đã Sơ Tán An Toàn</h6>
+                                <small class="text-muted">Đã ghi nhận có mặt tại các trạm dã chiến</small>
+                            </div>
+                            <span class="badge bg-success fs-5 px-3 py-2 rounded-pill" th:text="${summary.safeCheckinsCount} + ' người'">0 người</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- FOOTER COREUI -->
+        <footer class="mt-auto bg-white py-3 px-4 border-top text-muted small d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Hệ Thống Chỉ Huy Cứu Nạn Quốc Gia</strong> &copy; 2026 Ban Chỉ Đạo Phòng Chống Thiên Tai.
+            </div>
+            <div>
+                Giao diện điều hành: <strong class="text-primary">CoreUI Admin Dashboard</strong>
+            </div>
+        </footer>
     </div>
-</div>
 
-<script th:inline="javascript">
-    /*<![CDATA[*/
-    const pendingCount = /*[[${summary.pendingSos}]]*/ 0;
-    const inProgressCount = /*[[${summary.inProgressSos}]]*/ 0;
-    const completedCount = /*[[${summary.completedSos}]]*/ 0;
+    <!-- CoreUI & Chart JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.1.2/dist/js/coreui.bundle.min.js"></script>
 
-    const criticalCount = /*[[${summary.criticalPriority}]]*/ 0;
-    const highCount = /*[[${summary.highPriority}]]*/ 0;
-    const mediumCount = /*[[${summary.mediumPriority}]]*/ 0;
-    const lowCount = /*[[${summary.lowPriority}]]*/ 0;
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const pending = /*[[${summary.pendingSos}]]*/ 0;
+        const inProgress = /*[[${summary.inProgressSos}]]*/ 0;
+        const completed = /*[[${summary.completedSos}]]*/ 0;
 
-    // 1. Biểu đồ Doughnut trạng thái cứu nạn
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Chờ cứu nạn (PENDING)', 'Đang tiếp cận (IN_PROGRESS)', 'Đã giải cứu (COMPLETED)'],
-            datasets: [{
-                data: [pendingCount, inProgressCount, completedCount],
-                backgroundColor: ['#dc3545', '#0dcaf0', '#198754'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#ffffff', boxWidth: 14 }
-                }
-            }
-        }
-    });
+        const critical = /*[[${summary.criticalPriority}]]*/ 0;
+        const high = /*[[${summary.highPriority}]]*/ 0;
+        const medium = /*[[${summary.mediumPriority}]]*/ 0;
+        const low = /*[[${summary.lowPriority}]]*/ 0;
 
-    // 2. Biểu đồ Bar mức độ nguy cấp
-    new Chart(document.getElementById('priorityChart'), {
-        type: 'bar',
-        data: {
-            labels: ['Cực kỳ nguy cấp (CRITICAL)', 'Nguy cấp cao (HIGH)', 'Trung bình (MEDIUM)', 'Thấp (LOW)'],
-            datasets: [{
-                label: 'Số ca báo nạn',
-                data: [criticalCount, highCount, mediumCount, lowCount],
-                backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#0dcaf0'],
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#adb5bd', stepSize: 1 },
-                    grid: { color: '#495057' }
+        // 1. Biểu đồ Main Chart (Line/Area Chart phong cách CoreUI Traffic)
+        const ctxMain = document.getElementById('mainRescueChart');
+        if (ctxMain) {
+            new Chart(ctxMain, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', 'Hiện tại'],
+                    datasets: [
+                        {
+                            label: 'Đã giải cứu an toàn',
+                            backgroundColor: 'rgba(46, 184, 92, 0.1)',
+                            borderColor: '#2eb85c',
+                            pointHoverBackgroundColor: '#2eb85c',
+                            borderWidth: 2.5,
+                            data: [0, 1, 2, 4, 6, completed, completed],
+                            fill: true,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Đang tiếp cận mục tiêu',
+                            backgroundColor: 'rgba(51, 153, 255, 0.1)',
+                            borderColor: '#3399ff',
+                            pointHoverBackgroundColor: '#3399ff',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            data: [1, 2, 3, 2, 4, inProgress, inProgress],
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Chờ điều động cano (PENDING)',
+                            backgroundColor: 'rgba(229, 83, 83, 0.05)',
+                            borderColor: '#e55353',
+                            pointHoverBackgroundColor: '#e55353',
+                            borderWidth: 2,
+                            data: [2, 3, 5, 4, 3, pending, pending],
+                            tension: 0.35
+                        }
+                    ]
                 },
-                x: {
-                    ticks: { color: '#adb5bd' },
-                    grid: { display: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#ebedef' } },
+                        x: { grid: { display: false } }
+                    }
                 }
-            },
-            plugins: {
-                legend: { display: false }
-            }
+            });
         }
-    });
-    /*]]>*/
-</script>
+
+        // 2. Biểu đồ Doughnut (Status)
+        const ctxStatus = document.getElementById('statusChart');
+        if (ctxStatus) {
+            new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Chờ cứu nạn (PENDING)', 'Đang tiếp cận (IN_PROGRESS)', 'Đã giải cứu (COMPLETED)'],
+                    datasets: [{
+                        data: [pending, inProgress, completed],
+                        backgroundColor: ['#e55353', '#3399ff', '#2eb85c'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        // 3. Biểu đồ Bar (Priority)
+        const ctxPriority = document.getElementById('priorityChart');
+        if (ctxPriority) {
+            new Chart(ctxPriority, {
+                type: 'bar',
+                data: {
+                    labels: ['Cực kỳ nguy cấp', 'Nguy cấp cao', 'Trung bình', 'Hỗ trợ di dời'],
+                    datasets: [{
+                        label: 'Số ca',
+                        data: [critical, high, medium, low],
+                        backgroundColor: ['#e55353', '#f9b115', '#3399ff', '#6c757d'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#ebedef' }, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function toggleSidebar() {
+            document.getElementById('adminSidebar').classList.toggle('show');
+        }
+        /*]]>*/
+    </script>
 </body>
 </html>
