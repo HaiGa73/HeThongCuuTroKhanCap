@@ -1,17 +1,24 @@
 package com.rescue.disaster.controller;
 
-import com.rescue.disaster.dto.LoginRequestDto;
-import com.rescue.disaster.dto.RegisterRequestDto;
-import com.rescue.disaster.service.AuthService;
-import com.rescue.disaster.util.JwtUtils;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.rescue.disaster.dto.LoginRequestDto;
+import com.rescue.disaster.dto.RegisterRequestDto;
+import com.rescue.disaster.dto.ResetPasswordDto;
+import com.rescue.disaster.service.AuthService;
+import com.rescue.disaster.util.JwtUtils;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 @RequestMapping("/auth")
@@ -138,4 +145,50 @@ public class AuthController {
 
         return "redirect:/auth/login";
     }
+    
+
+ // 1. Màn hình yêu cầu quên mật khẩu
+    @GetMapping({"/forgot-password", "/auth/forgot-password"})
+    public String showForgotPasswordForm() {
+        return "auth/forgot-password";
+    }
+
+    // Xử lý gửi OTP đặt lại mật khẩu
+    @PostMapping({"/forgot-password", "/auth/forgot-password"})
+    public String handleForgotPassword(@RequestParam("username") String username,
+                                       RedirectAttributes redirectAttributes) {
+        try {
+            authService.processForgotPassword(username.trim());
+            redirectAttributes.addFlashAttribute("successMsg", "Mã xác thực OTP đã được tạo! Vui lòng nhập mã để đặt lại mật khẩu.");
+            return "redirect:/auth/reset-password?username=" + username.trim();
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+            return "redirect:/auth/forgot-password";
+        }
+    }
+
+    // 2. Màn hình nhập OTP và mật khẩu mới
+    @GetMapping({"/reset-password", "/auth/reset-password"})
+    public String showResetPasswordForm(@RequestParam(value = "username", required = false) String username,
+                                        Model model) {
+        ResetPasswordDto dto = new ResetPasswordDto();
+        dto.setUsername(username);
+        model.addAttribute("resetDto", dto);
+        return "auth/reset-password";
+    }
+
+    // Xử lý xác nhận đổi mật khẩu
+    @PostMapping({"/reset-password", "/auth/reset-password"})
+    public String handleResetPassword(@ModelAttribute("resetDto") ResetPasswordDto dto,
+                                      RedirectAttributes redirectAttributes) {
+        try {
+            authService.resetPassword(dto);
+            redirectAttributes.addFlashAttribute("successMsg", "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.");
+            return "redirect:/auth/login";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+            return "redirect:/auth/reset-password?username=" + (dto.getUsername() != null ? dto.getUsername() : "");
+        }
+    }
+    
 }

@@ -1,12 +1,8 @@
 package com.rescue.disaster.service;
 
-import com.rescue.disaster.dto.LoginRequestDto;
-import com.rescue.disaster.dto.RegisterRequestDto;
-import com.rescue.disaster.entity.Role;
-import com.rescue.disaster.entity.User;
-import com.rescue.disaster.repository.RoleRepository;
-import com.rescue.disaster.repository.UserRepository;
-import com.rescue.disaster.util.JwtUtils;
+import java.time.LocalDateTime;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,8 +12,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.Set;
+import com.rescue.disaster.dto.LoginRequestDto;
+import com.rescue.disaster.dto.RegisterRequestDto;
+import com.rescue.disaster.dto.ResetPasswordDto;
+import com.rescue.disaster.entity.Role;
+import com.rescue.disaster.entity.User;
+import com.rescue.disaster.repository.RoleRepository;
+import com.rescue.disaster.repository.UserRepository;
+import com.rescue.disaster.util.JwtUtils;
 
 @Service
 public class AuthService {
@@ -136,5 +138,40 @@ public class AuthService {
         userRepository.save(user);
 
         otpService.sendOtp(user.getEmail(), user.getUsername(), newOtp);
+        
     }
+    
+	 // 1. Tạo và gửi mã OTP khôi phục mật khẩu
+    public void processForgotPassword(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản với tên đăng nhập này!"));
+
+        // Gọi OtpService có sẵn trong hệ thống để sinh mã OTP
+        otpService.generateAndSendOtp(user.getUsername());
+    }
+
+    // 2. Xác thực OTP và đổi mật khẩu mới
+    public void resetPassword(ResetPasswordDto dto) {
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp!");
+        }
+
+        // Xác thực mã OTP qua OtpService
+        boolean isValidOtp = otpService.validateOtp(dto.getUsername(), dto.getOtp());
+        if (!isValidOtp) {
+            throw new IllegalArgumentException("Mã OTP không hợp lệ hoặc đã hết hạn!");
+        }
+
+        User user = userRepository.findByUsername(dto.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại!"));
+
+        // Mã hóa mật khẩu mới bằng PasswordEncoder của Spring Security
+        user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+
+        // Hủy OTP sau khi sử dụng thành công (nếu OtpService có hỗ trợ clear)
+        otpService.clearOtp(dto.getUsername());
+    }
+    
+    
 }
