@@ -34,11 +34,8 @@ public class UserSosController {
 
         String username = authentication.getName();
 
-        // Lấy danh sách ca SOS thuộc về người dùng hiện tại và sắp xếp mới nhất lên đầu
-        List<SosRequest> myList = sosRequestRepository.findAll().stream()
-                .filter(s -> s.getUser() != null && username.equals(s.getUser().getUsername()))
-                .sorted((a, b) -> b.getSosId().compareTo(a.getSosId()))
-                .toList();
+        // Tối ưu: Để Database tự lọc và nạp sẵn Media qua truy vấn tối ưu
+        List<SosRequest> myList = sosRequestRepository.findAllByUsernameWithMedia(username);
 
         model.addAttribute("mySosList", myList);
         return "user/my-sos";

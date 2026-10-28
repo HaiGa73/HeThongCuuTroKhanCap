@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 @Entity
 @Table(name = "users")
 @Getter
@@ -23,6 +23,7 @@ public class User {
     @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
 
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -44,7 +45,8 @@ public class User {
     @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = false;
-
+    
+    @JsonIgnore
     @Column(name = "otp_code", length = 10)
     private String otpCode;
 

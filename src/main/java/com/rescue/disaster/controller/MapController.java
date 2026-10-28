@@ -68,7 +68,10 @@ public class MapController {
         List<Map<String, Object>> result = new ArrayList<>();
 
         for (SosRequest s : list) {
+            boolean isNotDeleted = (s.getIsDeleted() == null || !s.getIsDeleted());
+
             if (s.getLatitude() != null && s.getLongitude() != null 
+                    && isNotDeleted 
                     && !"COMPLETED".equalsIgnoreCase(s.getStatus()) 
                     && !"CANCELLED".equalsIgnoreCase(s.getStatus())) {
                 Map<String, Object> map = new HashMap<>();

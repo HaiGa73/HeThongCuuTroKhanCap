@@ -21,6 +21,9 @@ import com.rescue.disaster.repository.RoleRepository;
 import com.rescue.disaster.repository.UserRepository;
 import com.rescue.disaster.util.JwtUtils;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class AuthService {
 
@@ -93,8 +96,12 @@ public class AuthService {
 
         userRepository.save(user);
 
-        // Gửi mã OTP
-        otpService.sendOtp(dto.getEmail(), dto.getUsername(), otp);
+        // Gửi mã OTP an toàn với try-catch
+        try {
+            otpService.sendOtp(dto.getEmail(), dto.getUsername(), otp);
+        } catch (Exception e) {
+            log.warn(">> Không thể gửi email thực tế qua SMTP (kiểm tra OTP tại Console): {}", e.getMessage());
+        }
     }
 
     // 2. Xác thực mã OTP
@@ -137,26 +144,29 @@ public class AuthService {
         user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
         userRepository.save(user);
 
-        otpService.sendOtp(user.getEmail(), user.getUsername(), newOtp);
-        
+        // Sửa đúng biến lấy từ user và newOtp
+        try {
+            otpService.sendOtp(user.getEmail(), user.getUsername(), newOtp);
+        } catch (Exception e) {
+            log.warn(">> Không thể gửi email thực tế qua SMTP (kiểm tra OTP tại Console): {}", e.getMessage());
+        }
     }
-    
-	 // 1. Tạo và gửi mã OTP khôi phục mật khẩu
+
+    // 4. Tạo và gửi mã OTP khôi phục mật khẩu
     public void processForgotPassword(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản với tên đăng nhập này!"));
 
-        // Gọi OtpService có sẵn trong hệ thống để sinh mã OTP
         otpService.generateAndSendOtp(user.getUsername());
     }
 
-    // 2. Xác thực OTP và đổi mật khẩu mới
+    // 5. Xác thực OTP và đổi mật khẩu mới
+    @Transactional
     public void resetPassword(ResetPasswordDto dto) {
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
             throw new IllegalArgumentException("Mật khẩu xác nhận không khớp!");
         }
 
-        // Xác thực mã OTP qua OtpService
         boolean isValidOtp = otpService.validateOtp(dto.getUsername(), dto.getOtp());
         if (!isValidOtp) {
             throw new IllegalArgumentException("Mã OTP không hợp lệ hoặc đã hết hạn!");
@@ -165,13 +175,9 @@ public class AuthService {
         User user = userRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại!"));
 
-        // Mã hóa mật khẩu mới bằng PasswordEncoder của Spring Security
         user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
 
-        // Hủy OTP sau khi sử dụng thành công (nếu OtpService có hỗ trợ clear)
         otpService.clearOtp(dto.getUsername());
     }
-    
-    
 }

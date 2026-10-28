@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.rescue.disaster.entity.RescueTeam;
 import com.rescue.disaster.entity.SosRequest;
@@ -144,10 +145,14 @@ public class AdminUserController {
 
     // 4.3 Xóa đội
     @PostMapping("/manager/{id}/teams/{teamId}/delete")
+    @Transactional
     public String deleteTeam(@PathVariable("id") Long managerId,
                              @PathVariable("teamId") Long teamId,
                              RedirectAttributes redirectAttributes) {
         try {
+            List<SosRequest> teamSos = sosRequestRepository.findByRescueTeam_TeamIdOrderByCreatedAtDesc(teamId);
+            teamSos.forEach(s -> s.setRescueTeam(null));
+            sosRequestRepository.saveAll(teamSos);
             rescueTeamRepository.deleteById(teamId);
             redirectAttributes.addFlashAttribute("successMsg", "Đã xóa đội cứu nạn thành công!");
         } catch (Exception e) {

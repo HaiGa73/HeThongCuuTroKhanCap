@@ -34,6 +34,7 @@ public class DataInitializer implements CommandLineRunner {
         // 1. Đảm bảo 3 Role cơ bản luôn tồn tại
         Role adminRole = getOrCreateRole("ROLE_ADMIN", "Quản trị viên Ban chỉ đạo");
         Role managerRole = getOrCreateRole("ROLE_MANAGER", "Đội trưởng cứu nạn khu vực");
+        Role teamRole = getOrCreateRole("ROLE_RESCUE_TEAM", "Đội cứu hộ thực địa cano");
         Role userRole = getOrCreateRole("ROLE_USER", "Công dân / Tình nguyện viên");
 
         // 2. Khởi tạo / Đồng bộ lại mật khẩu chuẩn '123456'

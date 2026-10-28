@@ -180,12 +180,12 @@ public class SosService {
         if (teamId != null) {
             RescueTeam team = rescueTeamRepository.findById(teamId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đội cứu nạn ID: " + teamId));
-            
-            // Kiểm tra an toàn: Nếu không phải Admin thì đội đó phải thuộc quyền Manager này
             if (!isAdmin && (team.getManager() == null || !currentUsername.equals(team.getManager().getUsername()))) {
                 throw new SecurityException("Bạn không có quyền điều động đội này!");
             }
             sos.setRescueTeam(team);
+        } else {
+            sos.setRescueTeam(null);
         }
 
         SosRequest updated = sosRequestRepository.save(sos);
