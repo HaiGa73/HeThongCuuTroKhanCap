@@ -2,7 +2,9 @@ package com.rescue.disaster.service;
 
 import com.rescue.disaster.dto.ChangePasswordDto;
 import com.rescue.disaster.dto.ProfileUpdateDto;
+import com.rescue.disaster.entity.Role;
 import com.rescue.disaster.entity.User;
+import com.rescue.disaster.repository.RoleRepository;
 import com.rescue.disaster.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -17,14 +20,17 @@ import java.util.Map;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
 
     @Autowired
     public UserService(UserRepository userRepository,
+                       RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder,
                        CloudinaryService cloudinaryService) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.cloudinaryService = cloudinaryService;
     }
@@ -42,7 +48,6 @@ public class UserService {
         user.setPhoneNumber(dto.getPhoneNumber());
         user.setEmail(dto.getEmail());
 
-        // Xử lý upload avatar lên Cloudinary nếu có chọn ảnh mới
         if (dto.getAvatarFile() != null && !dto.getAvatarFile().isEmpty()) {
             try {
                 Map<String, Object> uploadResult = cloudinaryService.uploadFile(dto.getAvatarFile(), "user_avatars");
@@ -61,12 +66,10 @@ public class UserService {
     public void changePassword(String username, ChangePasswordDto dto) {
         User user = getUserByUsername(username);
 
-        // 1. Kiểm tra mật khẩu hiện tại
         if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác!");
         }
 
-        // 2. Kiểm tra mật khẩu mới và xác nhận mật khẩu
         if (dto.getNewPassword() == null || dto.getNewPassword().length() < 6) {
             throw new IllegalArgumentException("Mật khẩu mới phải có tối thiểu 6 ký tự!");
         }
@@ -75,12 +78,66 @@ public class UserService {
             throw new IllegalArgumentException("Xác nhận mật khẩu mới không khớp!");
         }
 
-        // 3. Không cho đặt trùng mật khẩu cũ
         if (passwordEncoder.matches(dto.getNewPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Mật khẩu mới không được trùng với mật khẩu hiện tại!");
         }
 
         user.setPasswordHash(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // 1. Lấy danh sách hoặc tìm kiếm người dùng
+    public List<User> searchUsers(String keyword, String role) {
+        List<User> list = userRepository.findAll();
+
+        if (keyword != null && !keyword.isBlank()) {
+            String kw = keyword.trim().toLowerCase();
+            list = list.stream()
+                    .filter(u -> (u.getUsername() != null && u.getUsername().toLowerCase().contains(kw))
+                            || (u.getEmail() != null && u.getEmail().toLowerCase().contains(kw))
+                            || (u.getFullName() != null && u.getFullName().toLowerCase().contains(kw))
+                            || (u.getPhoneNumber() != null && u.getPhoneNumber().contains(kw)))
+                    .toList();
+        }
+
+        if (role != null && !role.isBlank()) {
+            String targetRole = role.trim();
+            list = list.stream()
+                    .filter(u -> u.getRoles() != null && u.getRoles().stream()
+                            .anyMatch(r -> r.getName() != null && (
+                                    r.getName().equalsIgnoreCase(targetRole)
+                                    || r.getName().equalsIgnoreCase("ROLE_" + targetRole)
+                                    || ("ROLE_" + r.getName()).equalsIgnoreCase(targetRole)
+                            )))
+                    .toList();
+        }
+
+        return list;
+    }
+
+    // 2. Cập nhật vai trò (Role)
+    @Transactional
+    public void updateUserRole(Long userId, String newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng ID: " + userId));
+
+        Role role = roleRepository.findByName(newRole)
+                .or(() -> roleRepository.findByName(newRole.startsWith("ROLE_") ? newRole.substring(5) : "ROLE_" + newRole))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vai trò: " + newRole));
+
+        user.getRoles().clear();
+        user.getRoles().add(role);
+        userRepository.save(user);
+    }
+
+    // 3. Khóa / Mở khóa tài khoản (sử dụng trực tiếp trường isActive)
+    @Transactional
+    public void toggleUserStatus(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng ID: " + userId));
+
+        boolean currentActive = (user.getIsActive() != null) ? user.getIsActive() : false;
+        user.setIsActive(!currentActive);
         userRepository.save(user);
     }
 }

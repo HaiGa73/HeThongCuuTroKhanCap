@@ -27,7 +27,7 @@ public class SecurityConfig {
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
             	    // 1. Phân quyền ADMIN
-            	    .requestMatchers("/alerts/**", "/analytics/**").hasRole("ADMIN")
+            	    .requestMatchers("/alerts/**", "/analytics/**", "/admin/**").hasRole("ADMIN")
 
             	    // 2. Phân quyền MANAGER & ADMIN
             	    .requestMatchers("/manager/**", "/logistics/inventory", "/logistics/api/**").hasAnyRole("MANAGER", "ADMIN")

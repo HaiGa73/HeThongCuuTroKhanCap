@@ -60,4 +60,26 @@ public class User {
     )
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
+    
+    public Boolean getEnabled() {
+        return this.isActive != null ? this.isActive : false;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.isActive = enabled;
+    }
+
+    // 2. Getter tiện ích lấy tên vai trò đầu tiên để Thymeleaf hiển thị
+    public String getRole() {
+        if (this.roles == null || this.roles.isEmpty()) {
+            return "ROLE_USER";
+        }
+        Role firstRole = this.roles.iterator().next();
+        return (firstRole != null && firstRole.getName() != null) ? firstRole.getName() : "ROLE_USER";
+    }
+
+    // 3. Getter tương thích với getId()
+    public Long getId() {
+        return this.userId;
+    }
 }
