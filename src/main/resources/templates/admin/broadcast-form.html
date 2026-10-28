@@ -1,110 +1,131 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trung Tâm Phát Cảnh Báo Khẩn Cấp Diện Rộng</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <title>Phát Lệnh Báo Động Khẩn Cấp - Ban Chỉ Đạo</title>
+    <link href="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.1.2/dist/css/coreui.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f3f4f7; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; }
+        .admin-sidebar { width: 256px; background: #212631; position: fixed; top: 0; bottom: 0; left: 0; z-index: 1030; display: flex; flex-direction: column; }
+        .sidebar-brand { height: 64px; background: rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 1.25rem; color: #fff; font-weight: 800; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-nav { list-style: none; padding: 0.75rem 0; margin: 0; flex: 1; overflow-y: auto; }
+        .nav-title { padding: 0.75rem 1.25rem 0.25rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+        .sidebar-nav .nav-link { display: flex; align-items: center; padding: 0.7rem 1.25rem; color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+        .sidebar-nav .nav-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
+        .sidebar-nav .nav-link.active { color: #fff; background: #dc3545; font-weight: 600; }
+        .sidebar-nav .nav-link i { font-size: 1.15rem; margin-right: 0.85rem; width: 20px; text-align: center; }
+        .main-wrapper { margin-left: 256px; min-height: 100vh; display: flex; flex-direction: column; }
+        .admin-header { height: 64px; background: #fff; border-bottom: 1px solid #d8dbe0; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; position: sticky; top: 0; z-index: 1020; }
+        .coreui-card { background: #fff; border: 0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    </style>
 </head>
-<body class="bg-dark text-white">
+<body>
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary">
-        <h4 class="fw-bold mb-0 text-danger">📢 TRUNG TÂM PHÁT CẢNH BÁO THIÊN TAI KHẨN CẤP</h4>
-        <div class="gap-2 d-flex">
-            <a href="/survival-guide" class="btn btn-outline-info btn-sm">📖 Xem Cẩm Nang</a>
-            <a href="/map" class="btn btn-outline-light btn-sm">🗺️ Xem Bản Đồ</a>
-            <a href="/manager/dashboard" class="btn btn-primary btn-sm">🚨 Dashboard Cứu Nạn</a>
-        </div>
-    </div>
+    <!-- SIDEBAR COREUI -->
+    <aside class="admin-sidebar">
+        <a class="sidebar-brand" href="/">
+            <i class="bi bi-shield-shaded text-danger fs-3 me-2"></i>
+            <span>CỨU NẠN THIÊN TAI</span>
+        </a>
 
-    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center" role="alert">
-        <span th:text="${successMsg}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+        <ul class="sidebar-nav">
+            <li class="nav-title">Trung Tâm Tác Chiến</li>
+            <li><a class="nav-link" href="/analytics/dashboard"><i class="bi bi-speedometer2"></i> Dashboard Thống Kê</a></li>
+            <li><a class="nav-link active" href="/admin/broadcast"><i class="bi bi-megaphone-fill"></i> Phát Thông Báo Khẩn Cấp</a></li>
+            <li><a class="nav-link" href="/manager/dashboard"><i class="bi bi-broadcast"></i> Trực Ban Cano SOS</a></li>
+            <li><a class="nav-link" href="/map"><i class="bi bi-geo-alt-fill"></i> Bản Đồ Vùng Ngập Lụt</a></li>
 
-    <div class="row g-4">
-        <!-- Form Soạn Tin Bắn Cảnh Báo Khẩn Cấp -->
-        <div class="col-lg-5">
-            <div class="card bg-secondary text-white shadow border-danger">
-                <div class="card-header bg-danger text-white fw-bold py-3">
-                    <h5 class="mb-0">🚨 BẮN CẢNH BÁO TỨC THỜI (BROADCAST)</h5>
-                </div>
-                <div class="card-body p-4">
-                    <form th:action="@{/alerts/broadcast}" method="post" th:object="${alertDto}">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Mức độ cảnh báo (*):</label>
-                            <select class="form-select bg-dark text-white border-0" th:field="*{severity}">
-                                <option value="EXTREME">🔴 CỰC KỲ NGUY HIỂM (Vỡ đê / Lũ quét cấp tập)</option>
-                                <option value="DANGER" selected>🟠 NGUY HIỂM (Xả lũ khẩn cấp / Triều cường cao)</option>
-                                <option value="WARNING">🟡 CẢNH BÁO (Mưa lớn kéo dài / Nguy cơ sạt lở)</option>
-                                <option value="INFO">🔵 THÔNG TIN (Thời tiết / Tuyến đường thông xe)</option>
-                            </select>
+            <li class="nav-title">Phục Vụ Dân Sinh</li>
+            <li><a class="nav-link" href="/relatives/search"><i class="bi bi-people-fill"></i> Tra Cứu Thân Nhân</a></li>
+            <li><a class="nav-link" href="/logistics/inventory"><i class="bi bi-box2-heart-fill"></i> Kho Hàng & Tiếp Tế</a></li>
+            <li><a class="nav-link" href="/survival-guide"><i class="bi bi-journal-text"></i> Cẩm Nang Sinh Tồn</a></li>
+
+            <li class="nav-title">Quản Trị Hệ Thống</li>
+            <li><a class="nav-link" href="/"><i class="bi bi-house-door"></i> Xem Trang Chủ Web</a></li>
+            <li><a class="nav-link" href="/user/profile"><i class="bi bi-person-gear"></i> Hồ Sơ Quản Trị</a></li>
+            <li><a class="nav-link text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right"></i> Đăng Xuất</a></li>
+        </ul>
+    </aside>
+
+    <div class="main-wrapper">
+        <header class="admin-header">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0 small">
+                    <li class="breadcrumb-item"><a href="/analytics/dashboard" class="text-decoration-none text-muted">Ban Chỉ Đạo</a></li>
+                    <li class="breadcrumb-item active text-danger fw-bold">Phát Thông Báo Báo Động</li>
+                </ol>
+            </nav>
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill small fw-bold">
+                <i class="bi bi-broadcast me-1"></i> Kênh Cảnh Báo Toàn Quốc
+            </span>
+        </header>
+
+        <main class="p-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    
+                    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center mb-4">
+                        <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMsg}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show fw-bold text-center mb-4">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMsg}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div class="coreui-card p-4 border-top border-4 border-danger">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <div class="bg-danger text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                                <i class="bi bi-megaphone fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold mb-1 text-dark">TRUNG TÂM PHÁT LỆNH BÁO ĐỘNG</h4>
+                                <p class="text-muted small mb-0">Tin nhắn và âm thanh báo động sẽ đẩy tức thì (Realtime WebSocket) tới tất cả thiết bị của người dân và lực lượng cano đang trực chiến.</p>
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Tiêu đề cảnh báo (*):</label>
-                            <input type="text" class="form-control bg-dark text-white border-0" th:field="*{title}" 
-                                   placeholder="VD: CẢNH BÁO KHẨN CẤP: HỒ XẢ LŨ 1.500 M3/S" required>
-                        </div>
+                        <form th:action="@{/alerts/broadcast}" method="post" th:object="${alertDto}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark">Tiêu đề cảnh báo (*):</label>
+                                <input type="text" class="form-control" th:field="*{title}" placeholder="VD: LŨ QUÉT KHẨN CẤP VÙNG HẠ LƯU SÔNG HỒNG" required>
+                            </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nội dung chỉ đạo & Hướng dẫn (*):</label>
-                            <textarea class="form-control bg-dark text-white border-0" th:field="*{content}" rows="4"
-                                      placeholder="VD: Dự kiến nước sông dâng cao thêm 1.5m trong 2 giờ tới. Toàn bộ người dân vùng trũng khẩn trương di tản lên các điểm sơ tán trên cao!" required></textarea>
-                        </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Mức độ khẩn cấp (*):</label>
+                                    <select class="form-select border-danger text-danger fw-bold" th:field="*{level}">
+                                        <option value="CRITICAL">🔴 CỰC KỲ NGUY HIỂM (BÁO ĐỘNG ĐỎ)</option>
+                                        <option value="HIGH">🟠 CẢNH BÁO CAO (SƠ TÁN NGAY)</option>
+                                        <option value="MEDIUM">🟡 CHÚ Ý THEO DÕI VÙNG NGẬP</option>
+                                        <option value="INFO">🔵 THÔNG BÁO TÌNH HÌNH THỜI TIẾT</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark">Vùng / Địa bàn chịu ảnh hưởng (*):</label>
+                                    <input type="text" class="form-control" th:field="*{affectedArea}" placeholder="VD: Toàn bộ Xã Tân Dân, Huyện Nam Đàn..." required>
+                                </div>
+                            </div>
 
-                        <button type="submit" class="btn btn-danger btn-lg w-100 fw-bold shadow py-2"
-                                onclick="return confirm('Bạn có chắc chắn muốn BẮN CẢNH BÁO này đến toàn bộ người dùng đang online không?')">
-                            🚀 PHÁT TÍN HIỆU CẢNH BÁO NGAY
-                        </button>
-                    </form>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-dark">Nội dung chỉ đạo ứng phó & di dời (*):</label>
+                                <textarea class="form-control" rows="5" th:field="*{message}" 
+                                          placeholder="VD: Nước lũ đang dâng cao thêm 1m trong 2 giờ tới. Đề nghị toàn thể bà con lập tức di chuyển lên các mái nhà kiên cố, chuẩn bị sẵn còi hoặc đèn pin..." required></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-danger w-100 fw-bold py-3 rounded-pill shadow">
+                                <i class="bi bi-broadcast me-2"></i> PHÁT TÍN HIỆU CẢNH BÁO TOÀN DÂN NGAY
+                            </button>
+                        </form>
+                    </div>
+
                 </div>
             </div>
-        </div>
-
-        <!-- Lịch Sử Các Bản Tin Cảnh Báo Đã Bắn -->
-        <div class="col-lg-7">
-            <div class="card bg-secondary text-white shadow">
-                <div class="card-header fw-bold">
-                    Lịch Sử Các Bản Tin Cảnh Báo Đã Ban Hành
-                </div>
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-dark table-hover table-bordered mb-0 align-middle">
-                        <thead>
-                            <tr class="text-center">
-                                <th style="width: 70px;">Mã</th>
-                                <th style="width: 130px;">Cấp độ</th>
-                                <th>Tiêu đề & Nội dung</th>
-                                <th style="width: 140px;">Thời gian</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:if="${alertHistory.isEmpty()}">
-                                <td colspan="4" class="text-center text-muted py-4">Chưa có bản tin cảnh báo nào được phát ra.</td>
-                            </tr>
-                            <tr th:each="a : ${alertHistory}">
-                                <td class="text-center fw-bold" th:text="'#' + ${a.alertId}">#1</td>
-                                <td class="text-center">
-                                    <span class="badge" th:classappend="${a.severity == 'EXTREME' or a.severity == 'DANGER' ? 'bg-danger' : (a.severity == 'WARNING' ? 'bg-warning text-dark' : 'bg-info text-dark')}"
-                                          th:text="${a.severity}">DANGER</span>
-                                </td>
-                                <td>
-                                    <div class="fw-bold text-warning" th:text="${a.title}">Tiêu đề</div>
-                                    <small class="text-light" th:text="${a.content}">Nội dung</small>
-                                </td>
-                                <td class="text-center small text-muted" th:text="${#temporals.format(a.createdAt, 'HH:mm dd/MM/yyyy')}">Thời gian</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@5.1.2/dist/js/coreui.bundle.min.js"></script>
 </body>
 </html>

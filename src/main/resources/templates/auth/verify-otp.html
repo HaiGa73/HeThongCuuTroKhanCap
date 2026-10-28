@@ -1,72 +1,173 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xác Thực OTP - Kích Hoạt Tài Khoản</title>
+    <title>Xác Thực Mã OTP - Cứu Nạn Thiên Tai</title>
+    <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .otp-card {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            max-width: 460px;
+            width: 100%;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+        .otp-header-icon {
+            width: 72px;
+            height: 72px;
+            background: #fee2e2;
+            color: #dc3545;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            font-size: 2rem;
+            border: 4px solid #fff5f5;
+        }
         .otp-input {
             letter-spacing: 12px;
-            font-size: 26px;
+            font-size: 1.85rem;
+            font-weight: 800;
             text-align: center;
-            font-weight: bold;
+            padding-left: 20px;
+            border-radius: 12px;
+            border: 2px solid #cbd5e1;
+            background-color: #f8fafc;
+            color: #0f172a;
+            transition: all 0.2s ease;
+        }
+        .otp-input:focus {
+            background-color: #ffffff;
+            border-color: #dc3545;
+            box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.15);
+            outline: none;
+        }
+        .otp-input::placeholder {
+            letter-spacing: 6px;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        .btn-verify {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 12px;
+            border-radius: 50rem;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+        .btn-verify:hover {
+            background: #b02a37;
+            border-color: #b02a37;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
     </style>
 </head>
-<body class="bg-dark text-white">
+<body>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5 col-lg-4">
-            <div class="card bg-secondary text-white shadow-lg border-0">
-                <div class="card-header bg-warning text-dark text-center py-3">
-                    <h4 class="fw-bold mb-0">🔐 XÁC THỰC MÃ OTP</h4>
-                    <small>Kích hoạt tài khoản cứu hộ</small>
-                </div>
-                <div class="card-body p-4 text-center">
-                    <p class="small text-light mb-3">
-                        Mã xác thực 6 chữ số đã được tạo cho tài khoản: 
-                        <strong class="text-warning" th:text="${username}">user</strong>
-                    </p>
+<div class="otp-card p-4 p-sm-5 text-center">
+    
+    <!-- Icon Bảo mật -->
+    <div class="otp-header-icon shadow-sm">
+        <i class="bi bi-shield-lock-fill"></i>
+    </div>
 
-                    <div th:if="${errorMsg}" class="alert alert-danger py-2 small fw-bold" th:text="${errorMsg}"></div>
-                    <div th:if="${successMsg}" class="alert alert-success py-2 small fw-bold" th:text="${successMsg}"></div>
+    <h3 class="fw-bold text-dark mb-1">Xác Thực Mã OTP</h3>
+    <p class="text-muted small mb-3">Kích hoạt tài khoản tham gia ứng cứu thiên tai</p>
 
-                    <form th:action="@{/auth/verify-otp}" method="post">
-                        <input type="hidden" name="username" th:value="${username}">
+    <!-- Thông tin tài khoản -->
+    <div class="bg-light p-2 rounded-3 border mb-3 small text-secondary">
+        Mã xác nhận gửi tới tài khoản: 
+        <strong class="text-danger fw-bold fs-6" th:text="${username != null ? username : (param.username != null ? param.username : 'người dùng')}">1234</strong>
+    </div>
 
-                        <div class="mb-3">
-                            <input type="text" name="otp" class="form-control bg-dark text-white border-0 otp-input"
-                                   placeholder="------" maxlength="6" pattern="[0-9]{6}" required autofocus>
-                            <small class="text-muted d-block mt-2">Mã OTP có hiệu lực trong 5 phút</small>
-                        </div>
+    <!-- Thông báo thành công / nhắc nhở -->
+    <div th:if="${message != null or param.message != null}" class="alert alert-success py-2 px-3 small border-0 shadow-sm rounded-3 mb-3 text-start d-flex align-items-center gap-2">
+        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+        <span th:text="${message != null ? message : param.message}">Mã xác thực OTP đã được tạo! Vui lòng nhập mã để kích hoạt.</span>
+    </div>
 
-                        <button type="submit" class="btn btn-warning w-100 fw-bold py-2 shadow">
-                            XÁC THỰC VÀ KÍCH HOẠT
-                        </button>
-                    </form>
+    <!-- Thông báo lỗi (nếu nhập sai OTP) -->
+    <div th:if="${error != null or param.error != null}" class="alert alert-danger py-2 px-3 small border-0 shadow-sm rounded-3 mb-3 text-start d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+        <span th:text="${error != null ? error : (param.error == 'invalid' ? 'Mã OTP không đúng hoặc đã hết hạn!' : param.error)}">Mã OTP không chính xác!</span>
+    </div>
 
-                    <hr class="border-secondary my-3">
+    <!-- Form nhập OTP -->
+    <form th:action="@{/auth/verify-otp}" method="post" class="mt-4">
+        <!-- Hidden input gửi kèm username -->
+        <input type="hidden" name="username" th:value="${username != null ? username : param.username}">
 
-                    <form th:action="@{/auth/resend-otp}" method="post">
-                        <input type="hidden" name="username" th:value="${username}">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="small text-light">Chưa nhận được mã?</span>
-                            <button type="submit" class="btn btn-link text-info text-decoration-none small p-0 fw-bold">
-                                Gửi lại mã OTP
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+        <div class="mb-3">
+            <input type="text" 
+                   id="otp" 
+                   name="otp" 
+                   class="form-control otp-input" 
+                   placeholder="••••••" 
+                   maxlength="6" 
+                   autocomplete="one-time-code" 
+                   inputmode="numeric" 
+                   pattern="[0-9]{6}" 
+                   required 
+                   autofocus>
+        </div>
 
-            <div class="text-center mt-3">
-                <a href="/auth/login" class="text-light small text-decoration-none">← Quay lại trang đăng nhập</a>
-            </div>
+        <div class="d-flex align-items-center justify-content-center gap-1 text-muted small mb-4">
+            <i class="bi bi-clock-history text-danger"></i>
+            <span>Mã OTP có hiệu lực trong vòng <strong class="text-dark">5 phút</strong></span>
+        </div>
+
+        <button type="submit" class="btn btn-verify w-100 shadow-sm">
+            <i class="bi bi-patch-check-fill me-1"></i> XÁC THỰC VÀ KÍCH HOẠT
+        </button>
+    </form>
+
+    <!-- Lối tắt gửi lại và quay về đăng nhập -->
+    <div class="mt-4 pt-3 border-top text-center">
+        <div class="small text-muted mb-2">
+            Chưa nhận được mã? 
+            <a th:href="@{/auth/resend-otp(username=${username != null ? username : param.username})}" 
+               class="text-danger fw-bold text-decoration-none ms-1">
+                Gửi lại mã OTP
+            </a>
+        </div>
+        <div>
+            <a href="/auth/login" class="text-secondary small text-decoration-none fw-semibold">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại trang đăng nhập
+            </a>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Tự động lọc chỉ cho nhập số
+    const otpInput = document.getElementById('otp');
+    if (otpInput) {
+        otpInput.addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+</script>
 </body>
 </html>
