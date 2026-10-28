@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface SosRequestRepository extends JpaRepository<SosRequest, Long> {
 
     List<SosRequest> findByStatusAndIsDeletedFalse(String status);
-
+    List<SosRequest> findByRescueTeam_TeamIdOrderByCreatedAtDesc(Long teamId);
     // Chấp nhận cả isDeleted = false hoặc NULL để đảm bảo không bị sót dữ liệu
     @Query("SELECT DISTINCT s FROM SosRequest s LEFT JOIN FETCH s.mediaList WHERE (s.isDeleted = false OR s.isDeleted IS NULL) ORDER BY s.createdAt DESC")
     List<SosRequest> findAllWithMedia();
@@ -29,4 +29,5 @@ public interface SosRequestRepository extends JpaRepository<SosRequest, Long> {
     long countByIsDeletedFalse();
     long countByStatusAndIsDeletedFalse(String status);
     long countByPriorityAndIsDeletedFalse(String priority);
+
 }

@@ -1,12 +1,10 @@
 package com.rescue.disaster.service;
 
-import com.rescue.disaster.dto.SosCreateRequestDto;
-import com.rescue.disaster.entity.SosMedia;
-import com.rescue.disaster.entity.SosRequest;
-import com.rescue.disaster.entity.User;
-import com.rescue.disaster.repository.SosRequestRepository;
-import com.rescue.disaster.repository.UserRepository;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
@@ -15,10 +13,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import com.rescue.disaster.dto.SosCreateRequestDto;
+import com.rescue.disaster.entity.RescueTeam;
+import com.rescue.disaster.entity.SosMedia;
+import com.rescue.disaster.entity.SosRequest;
+import com.rescue.disaster.entity.User;
+import com.rescue.disaster.repository.RescueTeamRepository;
+import com.rescue.disaster.repository.SosRequestRepository;
+import com.rescue.disaster.repository.UserRepository;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -28,18 +32,22 @@ public class SosService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final SimpMessagingTemplate messagingTemplate;
+    
+    private final RescueTeamRepository rescueTeamRepository;
 
     @Autowired
     public SosService(SosRequestRepository sosRequestRepository,
                       UserRepository userRepository,
+                      RescueTeamRepository rescueTeamRepository, 
                       CloudinaryService cloudinaryService,
                       SimpMessagingTemplate messagingTemplate) {
         this.sosRequestRepository = sosRequestRepository;
         this.userRepository = userRepository;
+        this.rescueTeamRepository = rescueTeamRepository;
         this.cloudinaryService = cloudinaryService;
         this.messagingTemplate = messagingTemplate;
     }
-
+    
     @Transactional
     public SosRequest createSos(SosCreateRequestDto dto) {
         User currentUser = null;
@@ -121,7 +129,8 @@ public class SosService {
 
         return savedSos;
     }
-
+    
+    
     private String mapTypeToText(String type) {
         return switch (type) {
             case "INJURY_EMERGENCY" -> "Có người bị thương/Đau ốm nguy kịch";
@@ -150,8 +159,15 @@ public class SosService {
         return updated;
     }
     
+    public List<RescueTeam> getTeamsForUser(String username, boolean isAdmin) {
+        if (isAdmin) {
+            return rescueTeamRepository.findAll();
+        }
+        return rescueTeamRepository.findByManager_Username(username);
+    }
+    
     @Transactional
-    public SosRequest updateSosHandling(Long id, String newStatus, String note) {
+    public SosRequest updateSosHandling(Long id, String newStatus, String note, Long teamId, String currentUsername, boolean isAdmin) {
         SosRequest sos = sosRequestRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca cứu nạn có ID: " + id));
 
@@ -159,10 +175,29 @@ public class SosService {
         if (note != null) {
             sos.setManagerNote(note.trim());
         }
+
+        // Nếu có chọn Đội điều động
+        if (teamId != null) {
+            RescueTeam team = rescueTeamRepository.findById(teamId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đội cứu nạn ID: " + teamId));
+            
+            // Kiểm tra an toàn: Nếu không phải Admin thì đội đó phải thuộc quyền Manager này
+            if (!isAdmin && (team.getManager() == null || !currentUsername.equals(team.getManager().getUsername()))) {
+                throw new SecurityException("Bạn không có quyền điều động đội này!");
+            }
+            sos.setRescueTeam(team);
+        }
+
         SosRequest updated = sosRequestRepository.save(sos);
 
         try {
+            // 1. Báo về Manager
             messagingTemplate.convertAndSend("/topic/manager/sos-status-updated", updated);
+            
+            // 2. Bắn chuông báo động trực tiếp cho màn hình của Đội cứu hộ được điều động
+            if (updated.getRescueTeam() != null) {
+                messagingTemplate.convertAndSend("/topic/team/" + updated.getRescueTeam().getTeamId(), updated);
+            }
         } catch (Exception ignored) {}
 
         return updated;

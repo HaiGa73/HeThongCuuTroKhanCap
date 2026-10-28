@@ -29,6 +29,10 @@ public class RescueTeam {
     @Column(name = "vehicle_type", length = 100)
     private String vehicleType; // Cano máy, Xuồng hơi cứu sinh, Xe lội nước
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    private User manager;
+    
     @Column(name = "vehicle_capacity")
     private Integer vehicleCapacity = 4;
 

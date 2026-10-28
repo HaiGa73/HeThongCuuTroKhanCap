@@ -14,6 +14,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.rescue.disaster.dto.LoginRequestDto;
 import com.rescue.disaster.dto.RegisterRequestDto;
 import com.rescue.disaster.dto.ResetPasswordDto;
+import com.rescue.disaster.entity.User;
+import com.rescue.disaster.repository.UserRepository;
 import com.rescue.disaster.service.AuthService;
 import com.rescue.disaster.util.JwtUtils;
 
@@ -26,6 +28,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtUtils jwtUtils;
+    private final UserRepository userRepository;
 
     @Value("${jwt.cookie-name}")
     private String cookieName;
@@ -34,9 +37,10 @@ public class AuthController {
     private int jwtExpirationMs;
 
     @Autowired
-    public AuthController(AuthService authService, JwtUtils jwtUtils) {
+    public AuthController(AuthService authService, JwtUtils jwtUtils, UserRepository userRepository) {
         this.authService = authService;
         this.jwtUtils = jwtUtils;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/login")
@@ -57,20 +61,38 @@ public class AuthController {
         try {
             String token = authService.login(dto);
 
+            // Thiết lập JWT Cookie
             Cookie cookie = new Cookie(cookieName, token);
             cookie.setHttpOnly(true);
             cookie.setPath("/");
             cookie.setMaxAge(jwtExpirationMs / 1000);
             response.addCookie(cookie);
 
-            if ("admin".equalsIgnoreCase(dto.getUsername())) {
+            // Lấy thông tin tài khoản để phân luồng điều hướng theo vai trò (Role)
+            User user = userRepository.findByUsername(dto.getUsername()).orElse(null);
+            String role = (user != null && user.getRole() != null) ? user.getRole().toUpperCase() : "";
+            String username = dto.getUsername().toLowerCase().trim();
+
+            // 1. ADMIN (Ban Chỉ Đạo Trung Ương) -> Dashboard Thống Kê
+            if (role.contains("ADMIN") || "admin".equalsIgnoreCase(username)) {
                 return "redirect:/analytics/dashboard";
-            } else if ("manager".equalsIgnoreCase(dto.getUsername())) {
+            }
+            
+            // 2. MANAGER (Chỉ Huy Vùng) -> Bảng Điều Phối SOS
+            if (role.contains("MANAGER") || username.startsWith("manager")) {
                 return "redirect:/manager/dashboard";
             }
-            return "redirect:/map";
+            
+            // 3. RESCUE_TEAM (Đội Cứu Hộ Thực Địa) -> Trang Trực Ban Nhận Lệnh Tác Chiến
+            if (role.contains("RESCUE_TEAM") || role.contains("TEAM") || username.startsWith("team")) {
+                return "redirect:/team/mission";
+            }
+
+            // 4. USER (Công dân / Người dân) -> Về Trang Chủ Web
+            return "redirect:/";
+
         } catch (IllegalStateException e) {
-            // Trường hợp chưa kích hoạt OTP
+            // Trường hợp chưa kích hoạt mã OTP
             redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
             return "redirect:/auth/verify-otp?username=" + dto.getUsername();
         } catch (Exception e) {
@@ -145,9 +167,8 @@ public class AuthController {
 
         return "redirect:/auth/login";
     }
-    
 
- // 1. Màn hình yêu cầu quên mật khẩu
+    // 1. Màn hình yêu cầu quên mật khẩu
     @GetMapping({"/forgot-password", "/auth/forgot-password"})
     public String showForgotPasswordForm() {
         return "auth/forgot-password";
@@ -190,5 +211,4 @@ public class AuthController {
             return "redirect:/auth/reset-password?username=" + (dto.getUsername() != null ? dto.getUsername() : "");
         }
     }
-    
 }

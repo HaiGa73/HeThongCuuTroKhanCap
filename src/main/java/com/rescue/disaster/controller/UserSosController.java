@@ -25,28 +25,42 @@ public class UserSosController {
         this.sosService = sosService;
     }
 
-    // Hiển thị danh sách các ca cứu nạn của cá nhân
+    // 1. Hiển thị danh sách các ca cứu nạn do tài khoản hiện tại tạo
     @GetMapping("/my-sos")
-    public String showMySosList(Authentication authentication, Model model) {
+    public String showMySos(Authentication authentication, Model model) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return "redirect:/auth/login";
+        }
+
         String username = authentication.getName();
-        List<SosRequest> myRequests = sosRequestRepository.findAllByUsernameWithMedia(username);
-        model.addAttribute("myRequests", myRequests);
-        model.addAttribute("username", username);
+
+        // Lấy danh sách ca SOS thuộc về người dùng hiện tại và sắp xếp mới nhất lên đầu
+        List<SosRequest> myList = sosRequestRepository.findAll().stream()
+                .filter(s -> s.getUser() != null && username.equals(s.getUser().getUsername()))
+                .sorted((a, b) -> b.getSosId().compareTo(a.getSosId()))
+                .toList();
+
+        model.addAttribute("mySosList", myList);
         return "user/my-sos";
     }
 
-    // Xử lý hủy ca SOS
+    // 2. Cho phép người dân hủy ca nếu nước đã rút hoặc đã tự thoát an toàn
     @PostMapping("/my-sos/{id}/cancel")
     public String cancelMySos(@PathVariable("id") Long id,
-                             @RequestParam(value = "reason", defaultValue = "Tôi đã tự sơ tán an toàn") String reason,
+                             @RequestParam("cancelReason") String cancelReason,
                              Authentication authentication,
                              RedirectAttributes redirectAttributes) {
-        try {
-            sosService.cancelSosByUser(id, authentication.getName(), reason);
-            redirectAttributes.addFlashAttribute("successMsg", "Đã hủy ca cứu nạn thành công. Cảm ơn bạn đã phản hồi để nhường lực lượng cứu trợ cho các trường hợp khác!");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMsg", "Không thể hủy ca: " + e.getMessage());
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return "redirect:/auth/login";
         }
+
+        try {
+            sosService.cancelSosByUser(id, authentication.getName(), cancelReason);
+            redirectAttributes.addFlashAttribute("successMsg", "Đã gửi yêu cầu hủy ca cứu nạn thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMsg", "Không thể hủy: " + e.getMessage());
+        }
+
         return "redirect:/user/my-sos";
     }
 }

@@ -1,72 +1,70 @@
 package com.rescue.disaster.controller;
 
-import com.rescue.disaster.dto.ChangePasswordDto;
-import com.rescue.disaster.dto.ProfileUpdateDto;
-import com.rescue.disaster.entity.User;
-import com.rescue.disaster.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.rescue.disaster.dto.ProfileUpdateDto;
+import com.rescue.disaster.entity.User;
+import com.rescue.disaster.repository.UserRepository;
 
 @Controller
 @RequestMapping("/user/profile")
 public class UserProfileController {
 
-    private final UserService userService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public UserProfileController(UserService userService) {
-        this.userService = userService;
+    public UserProfileController(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    // Hiển thị trang hồ sơ cá nhân
+    // 1. Hiển thị trang hồ sơ cá nhân
     @GetMapping
-    public String showProfilePage(Authentication authentication, Model model) {
-        String username = authentication.getName();
-        User user = userService.getUserByUsername(username);
-
-        ProfileUpdateDto profileDto = new ProfileUpdateDto();
-        profileDto.setFullName(user.getFullName());
-        profileDto.setPhoneNumber(user.getPhoneNumber());
-        profileDto.setEmail(user.getEmail());
-
-        model.addAttribute("user", user);
-        model.addAttribute("profileDto", profileDto);
-        if (!model.containsAttribute("passwordDto")) {
-            model.addAttribute("passwordDto", new ChangePasswordDto());
+    public String showProfile(Authentication auth, Model model) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/auth/login";
         }
 
+        User user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin tài khoản!"));
+
+        ProfileUpdateDto dto = new ProfileUpdateDto();
+        dto.setFullName(user.getFullName());
+        dto.setAddress(user.getAddress());
+
+        model.addAttribute("user", user);
+        model.addAttribute("profileDto", dto);
         return "user/profile";
     }
 
-    // Cập nhật thông tin cá nhân & Avatar
     @PostMapping("/update")
-    public String handleUpdateProfile(@ModelAttribute("profileDto") ProfileUpdateDto dto,
-                                      Authentication authentication,
-                                      RedirectAttributes redirectAttributes) {
-        try {
-            userService.updateProfile(authentication.getName(), dto);
-            redirectAttributes.addFlashAttribute("profileSuccessMsg", "Cập nhật hồ sơ cá nhân thành công!");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("profileErrorMsg", e.getMessage());
+    public String updateProfile(@ModelAttribute("profileDto") ProfileUpdateDto dto,
+                                Authentication auth,
+                                RedirectAttributes redirectAttributes) {
+        if (auth == null) {
+            return "redirect:/auth/login";
         }
-        return "redirect:/user/profile";
-    }
 
-    // Đổi mật khẩu
-    @PostMapping("/change-password")
-    public String handleChangePassword(@ModelAttribute("passwordDto") ChangePasswordDto dto,
-                                       Authentication authentication,
-                                       RedirectAttributes redirectAttributes) {
         try {
-            userService.changePassword(authentication.getName(), dto);
-            redirectAttributes.addFlashAttribute("pwdSuccessMsg", "Đổi mật khẩu thành công! Mật khẩu mới đã có hiệu lực.");
+            User user = userRepository.findByUsername(auth.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại!"));
+
+            user.setFullName(dto.getFullName() != null ? dto.getFullName().trim() : "");
+            user.setAddress(dto.getAddress() != null ? dto.getAddress().trim() : "");
+
+            userRepository.save(user);
+            redirectAttributes.addFlashAttribute("successMsg", "Đã cập nhật thông tin cá nhân thành công!");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("pwdErrorMsg", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMsg", "Lỗi cập nhật: " + e.getMessage());
         }
+
         return "redirect:/user/profile";
     }
 }

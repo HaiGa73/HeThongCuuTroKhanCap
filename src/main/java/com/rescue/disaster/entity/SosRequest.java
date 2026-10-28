@@ -39,7 +39,11 @@ public class SosRequest {
 
     @Column(name = "address_detail", length = 255)
     private String addressDetail;
-
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private RescueTeam rescueTeam;
+    
     @Builder.Default
     @Column(name = "number_of_people")
     private Integer numberOfPeople = 1;

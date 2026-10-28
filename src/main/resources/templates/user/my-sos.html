@@ -3,97 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theo Dõi Ca Cứu Nạn Của Tôi</title>
+    <title>Ca Cứu Nạn Của Tôi - Cứu Nạn Thiên Tai</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
-        body { background-color: #f8fafc; font-family: 'Roboto', sans-serif; color: #1e293b; }
-        .navbar-brand { font-weight: 800; color: #dc3545 !important; letter-spacing: 0.5px; }
-        .nav-link { font-weight: 600; font-size: 0.95rem; color: #334155 !important; }
-        .nav-link:hover { color: #dc3545 !important; }
-        .media-thumbnail { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; cursor: pointer; }
-        .status-badge { font-size: 0.95rem; padding: 6px 14px; border-radius: 50px; }
-        .card-sos { border: 1px solid #e2e8f0; border-radius: 12px; }
+        body { background: #f8fafc; font-family: 'Roboto', sans-serif; color: #1e293b; }
+        .navbar-brand { font-weight: 800; color: #dc3545 !important; }
+        .card-sos { border-radius: 14px; border: 1px solid #e2e8f0; transition: transform 0.2s ease; }
+        .badge-urgent { background: #ef4444; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-<!-- THANH NAVBAR ĐỒNG BỘ CHUẨN PHÂN QUYỀN -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top py-3" id="mainNav">
+<!-- Navbar Đồng Bộ -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm sticky-top py-3">
     <div class="container px-4 px-lg-5">
         <a class="navbar-brand d-flex align-items-center gap-2" href="/">
             <i class="bi bi-broadcast text-danger fs-3"></i>
             <span>CỨU NẠN THIÊN TAI</span>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navRes">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="navbarResponsive">
-            <!-- 1. Thanh menu ngang: Chỉ giữ đúng 4 mục dân sinh công khai duy nhất -->
-            <ul class="navbar-nav ms-auto my-2 my-lg-0 align-items-center gap-1">
+        <div class="collapse navbar-collapse" id="navRes">
+            <ul class="navbar-nav ms-auto align-items-center gap-1">
                 <li class="nav-item"><a class="nav-link" href="/map">Bản Đồ Cứu Nạn</a></li>
                 <li class="nav-item"><a class="nav-link" href="/relatives/search">Tìm Thân Nhân</a></li>
                 <li class="nav-item"><a class="nav-link" href="/survival-guide">Cẩm Nang Sinh Tồn</a></li>
                 <li class="nav-item"><a class="nav-link" href="/logistics/donate">Tiếp Tế Cứu Trợ</a></li>
                 
-                <!-- Khi chưa đăng nhập (GUEST) -->
-                <li th:if="${!isAuthenticated}" class="nav-item ms-lg-2">
-                    <a class="btn btn-outline-danger btn-sm px-3 fw-bold rounded-pill" href="/auth/login">Đăng Nhập</a>
-                </li>
-                <li th:if="${!isAuthenticated}" class="nav-item ms-lg-1">
-                    <a class="btn btn-danger btn-sm px-3 fw-bold rounded-pill text-white" href="/auth/register">Đăng Ký</a>
-                </li>
-
-                <!-- 2. Menu Profile Dropdown: Tự động phân cấp theo Role -->
                 <li th:if="${isAuthenticated}" class="nav-item dropdown ms-lg-2">
-                    <a class="btn btn-light btn-sm dropdown-toggle rounded-pill px-3 fw-bold border shadow-sm" 
-                       href="#" id="userDrop" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="btn btn-light btn-sm dropdown-toggle rounded-pill px-3 fw-bold border shadow-sm" href="#" data-bs-toggle="dropdown">
                         <i class="bi bi-person-circle text-danger me-1"></i>
                         <span th:text="${currentUsername}">User</span>
                     </a>
-                    
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
-                        <!-- Mọi tài khoản (User, Manager, Admin) đều thấy 2 mục này -->
-                        <li>
-                            <a class="dropdown-item" href="/user/my-sos">
-                                <i class="bi bi-activity text-danger me-2"></i>Ca cứu nạn của tôi
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="/user/profile">
-                                <i class="bi bi-person-gear text-primary me-2"></i>Hồ sơ cá nhân
-                            </a>
-                        </li>
-
-                        <!-- Dành riêng cho MANAGER và ADMIN -->
+                        <li><a class="dropdown-item text-danger fw-bold" href="/user/my-sos"><i class="bi bi-activity text-danger me-2"></i>Ca cứu nạn của tôi</a></li>
+                        <li><a class="dropdown-item" href="/user/profile"><i class="bi bi-person-gear text-primary me-2"></i>Hồ sơ cá nhân</a></li>
                         <li th:if="${isManager or isAdmin}"><hr class="dropdown-divider"></li>
-                        <li th:if="${isManager or isAdmin}">
-                            <a class="dropdown-item text-primary fw-bold" href="/manager/dashboard">
-                                <i class="bi bi-speedometer2 me-2"></i>Bảng Tác Chiến Manager
-                            </a>
-                        </li>
-                        <li th:if="${isManager or isAdmin}">
-                            <a class="dropdown-item text-success fw-bold" href="/logistics/inventory">
-                                <i class="bi bi-boxes me-2"></i>Quản Lý Kho Vật Phẩm
-                            </a>
-                        </li>
-
-                        <!-- Dành riêng cho ADMIN -->
-                        <li th:if="${isAdmin}">
-                            <a class="dropdown-item text-warning fw-bold" href="/analytics/dashboard">
-                                <i class="bi bi-pie-chart-fill me-2"></i>Thống Kê Ban Chỉ Đạo
-                            </a>
-                        </li>
-
+                        <li th:if="${isManager or isAdmin}"><a class="dropdown-item text-primary fw-bold" href="/manager/dashboard"><i class="bi bi-speedometer2 me-2"></i>Bảng Tác Chiến Manager</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="/auth/logout">
-                                <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
-                            </a>
-                        </li>
+                        <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
                     </ul>
                 </li>
             </ul>
@@ -101,85 +53,94 @@
     </div>
 </nav>
 
-<div class="container py-5">
+<div class="container py-4 px-lg-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold text-danger mb-1">🚨 LỊCH SỬ & TIẾN TRÌNH ỨNG CỨU CỦA BẠN</h3>
-            <p class="text-muted small mb-0">Dữ liệu được giám sát và cập nhật trực tiếp theo thời gian thực từ Đội Cứu Hộ.</p>
+            <h4 class="fw-bold mb-1 text-dark">📋 CÁC LỜI KÊU CỨU CỦA BẠN</h4>
+            <p class="text-muted small mb-0">Theo dõi tiến độ di chuyển và phương án giải cứu từ lực lượng cứu nạn thực địa</p>
         </div>
-        <span class="badge bg-success py-2 px-3 rounded-pill" id="ws-status">Live: Đang giám sát tiến độ</span>
+        <a href="/" class="btn btn-danger btn-sm rounded-pill fw-bold px-3 shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Gửi Yêu Cầu SOS Mới
+        </a>
     </div>
 
-    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center" role="alert">
-        <span th:text="${successMsg}"></span>
+    <!-- Thông báo kết quả -->
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center mb-3">
+        <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMsg}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show fw-bold text-center" role="alert">
-        <span th:text="${errorMsg}"></span>
+    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show fw-bold text-center mb-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMsg}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
-    <div th:if="${myRequests == null or myRequests.isEmpty()}" class="text-center py-5 bg-white rounded-4 shadow-sm border">
-        <div class="fs-1 text-muted mb-2">📋</div>
-        <h5 class="text-secondary fw-bold">Hiện tại bạn chưa gửi yêu cầu cứu nạn khẩn cấp nào.</h5>
-        <a href="/sos" class="btn btn-danger mt-3 fw-bold rounded-pill px-4 shadow-sm">🚨 Tạo Yêu Cầu Cứu Nạn Khẩn Cấp</a>
+    <!-- Trường hợp chưa có ca SOS -->
+    <div th:if="${mySosList == null or mySosList.isEmpty()}" class="card card-sos p-5 text-center bg-white shadow-sm">
+        <i class="bi bi-shield-check text-success display-3 mb-3"></i>
+        <h5 class="fw-bold text-dark">Bạn chưa tạo yêu cầu cứu nạn nào</h5>
+        <p class="text-muted small">Nếu bạn hoặc người thân đang ở trong vùng ngập lụt nguy cấp, hãy gửi ngay tọa độ SOS ngoài trang chủ.</p>
     </div>
 
-    <div class="row g-4" th:if="${myRequests != null and !myRequests.isEmpty()}">
-        <div class="col-12" th:each="sos : ${myRequests}">
-            <div class="card card-sos shadow-sm border-start border-5"
-                 th:classappend="${sos.status == 'PENDING' ? 'border-danger' : (sos.status == 'IN_PROGRESS' ? 'border-info' : (sos.status == 'COMPLETED' ? 'border-success' : 'border-secondary'))}">
-                <div class="card-body p-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-                        <div>
-                            <h5 class="fw-bold mb-1 text-dark">
-                                Yêu Cầu Cứu Trợ #<span th:text="${sos.sosId}">1</span> 
-                                <small class="text-muted fs-6 fw-normal" th:text="'(Gửi lúc: ' + ${#temporals.format(sos.createdAt, 'HH:mm dd/MM/yyyy')} + ')'"></small>
-                            </h5>
-                            <span class="badge bg-danger" th:text="'Mức độ: ' + ${sos.priority}">CRITICAL</span>
-                            <span class="badge bg-secondary" th:text="${sos.numberOfPeople} + ' người mắc kẹt'">1</span>
+    <!-- Danh sách ca SOS -->
+    <div class="row g-3" th:if="${mySosList != null and !mySosList.isEmpty()}">
+        <div class="col-12" th:each="sos : ${mySosList}">
+            <div class="card card-sos bg-white shadow-sm p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge bg-danger fs-6 fw-bold me-2" th:text="'#SOS-' + ${sos.sosId}">#SOS-1</span>
+                        <span th:if="${sos.priority == 'CRITICAL'}" class="badge bg-danger badge-urgent">🔴 KHẨN CẤP</span>
+                        <span th:if="${sos.priority == 'HIGH'}" class="badge bg-warning text-dark">🟠 NƯỚC DÂNG CAO</span>
+                        <span th:if="${sos.priority == 'MEDIUM'}" class="badge bg-info text-dark">🟡 CẦN TIẾP TẾ</span>
+                        <span th:if="${sos.priority == 'LOW'}" class="badge bg-secondary">⚪ DI DỜI</span>
+                    </div>
+                    
+                    <div>
+                        <span th:if="${sos.status == 'PENDING'}" class="badge bg-danger fs-6 py-2 px-3 rounded-pill">⏳ Đang chờ xác minh</span>
+                        <span th:if="${sos.status == 'IN_PROGRESS'}" class="badge bg-primary fs-6 py-2 px-3 rounded-pill">🚤 Cano đang tiếp cận</span>
+                        <span th:if="${sos.status == 'COMPLETED'}" class="badge bg-success fs-6 py-2 px-3 rounded-pill">✅ Đã an toàn</span>
+                        <span th:if="${sos.status == 'CANCELLED'}" class="badge bg-secondary fs-6 py-2 px-3 rounded-pill">❌ Đã hủy</span>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-7">
+                        <div class="mb-2">
+                            <span class="text-muted small">Địa chỉ hiện trường:</span>
+                            <div class="fw-bold text-primary" th:text="${sos.addressDetail}">Xã Nam Cường, Nam Đàn</div>
                         </div>
-
-                        <div class="text-end">
-                            <span th:id="'badge-' + ${sos.sosId}" class="badge status-badge"
-                                  th:classappend="${sos.status == 'PENDING' ? 'bg-danger' : (sos.status == 'IN_PROGRESS' ? 'bg-info text-dark' : (sos.status == 'COMPLETED' ? 'bg-success' : 'bg-secondary'))}"
-                                  th:text="${sos.status == 'PENDING' ? '⏳ CHỜ ĐIỀU PHỐI TIẾP CẬN' : (sos.status == 'IN_PROGRESS' ? '🚤 ĐỘI CỨU HỘ ĐANG TRÊN ĐƯỜNG ĐẾN' : (sos.status == 'COMPLETED' ? '✅ ĐÃ GIẢI CỨU AN TOÀN' : '❌ ĐÃ HỦY'))}">
-                                PENDING
-                            </span>
+                        <div class="mb-2">
+                            <span class="text-muted small">Tình hình khi gửi:</span>
+                            <div class="text-secondary small" th:text="${sos.description}">Mô tả tình trạng...</div>
+                        </div>
+                        <div class="small text-muted">
+                            <i class="bi bi-people-fill me-1"></i> Số người: <strong class="text-dark" th:text="${sos.numberOfPeople}">1</strong> |
+                            <i class="bi bi-telephone-fill ms-2 me-1"></i> SĐT: <strong class="text-dark" th:text="${sos.phoneNumber}">09...</strong>
                         </div>
                     </div>
 
-                    <div class="row g-3">
-                        <div class="col-md-7">
-                            <p class="mb-1"><strong>📍 Vị trí:</strong> 
-                                <span class="text-primary fw-bold" th:text="${sos.addressDetail ?: 'Tọa độ GPS'}"></span>
-                            </p>
-                            <p class="mb-2"><strong>📞 Số điện thoại:</strong> <span th:text="${sos.phoneNumber}"></span></p>
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Mô tả tình trạng:</strong>
-                                <p class="mb-0 text-secondary small mt-1" th:text="${sos.description ?: 'Không có mô tả chi tiết.'}"></p>
-                            </div>
+                    <div class="col-md-5 mt-3 mt-md-0 border-start ps-md-4">
+                        <h6 class="fw-bold text-success"><i class="bi bi-broadcast-pin me-1"></i> Tiến độ từ Đội cứu hộ:</h6>
+                        
+                        <div th:if="${sos.managerNote != null and !sos.managerNote.isEmpty()}" 
+                             class="p-3 bg-light rounded border border-success-subtle text-dark small mb-3">
+                            <strong class="text-success d-block mb-1">Phương án ứng cứu:</strong>
+                            <span th:text="${sos.managerNote}">Đã cử cano số 2 tiếp cận...</span>
+                        </div>
+                        <div th:unless="${sos.managerNote != null and !sos.managerNote.isEmpty()}" 
+                             class="text-muted small fst-italic mb-3">
+                            Ban chỉ huy đang kiểm tra vị trí tọa độ của bạn và điều phối cano gần nhất...
                         </div>
 
-                        <div class="col-md-5">
-                            <strong class="d-block mb-2 small text-muted">Hình ảnh hiện trường:</strong>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div th:if="${sos.mediaList.isEmpty()}" class="small text-muted fst-italic">
-                                    Không đính kèm hình ảnh.
-                                </div>
-                                <img th:each="media : ${sos.mediaList}" th:src="${media.mediaUrl}" 
-                                     class="media-thumbnail border shadow-sm" alt="Hiện trường"
-                                     onclick="window.open(this.src, '_blank')">
-                            </div>
+                        <!-- Nút Hủy ca chỉ hiện khi ca chưa hoàn thành -->
+                        <div th:if="${sos.status == 'PENDING' or sos.status == 'IN_PROGRESS'}">
+                            <form th:action="@{/user/my-sos/{id}/cancel(id=${sos.sosId})}" method="post" 
+                                  onsubmit="return confirm('Bạn có chắc chắn muốn hủy yêu cầu cứu hộ này (do nước đã rút hoặc đã tự thoát an toàn)?');">
+                                <input type="hidden" name="cancelReason" value="Người dân báo đã an toàn hoặc tự di chuyển">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm w-100 rounded-pill">
+                                    <i class="bi bi-x-circle me-1"></i> Tôi Đã Tự Thoát An Toàn (Hủy SOS)
+                                </button>
+                            </form>
                         </div>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center" th:if="${sos.status == 'PENDING' or sos.status == 'IN_PROGRESS'}">
-                        <span class="small text-muted">Nếu nước đã rút hoặc bạn đã được người thân hỗ trợ di tản an toàn:</span>
-                        <button class="btn btn-outline-danger btn-sm fw-bold rounded-pill px-3" 
-                                th:onclick="'openCancelModal(' + ${sos.sosId} + ')'">
-                            🛑 Tôi đã tự an toàn - Hủy yêu cầu cứu trợ
-                        </button>
                     </div>
                 </div>
             </div>
@@ -187,67 +148,6 @@
     </div>
 </div>
 
-<!-- Modal Hủy SOS -->
-<div class="modal fade" id="cancelModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <form id="cancelForm" method="post" action="">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fw-bold">Xác Nhận Hủy Yêu Cầu Cứu Trợ</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Bạn có chắc chắn muốn hủy yêu cầu cứu hộ này không?</p>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Lý do hủy yêu cầu:</label>
-                        <select name="reason" class="form-select">
-                            <option value="Tôi đã tự sơ tán an toàn lên chỗ cao">Tôi đã tự sơ tán an toàn lên chỗ cao</option>
-                            <option value="Nước lũ đã rút, hiện không còn nguy hiểm">Nước lũ đã rút, hiện không còn nguy hiểm</option>
-                            <option value="Đã được tàu/thuyền dân sinh hỗ trợ trước">Đã được tàu/thuyền dân sinh hỗ trợ trước</option>
-                            <option value="Bấm nhầm yêu cầu">Bấm nhầm yêu cầu</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-danger btn-sm fw-bold rounded-pill px-3">Xác Nhận Hủy</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    const cancelModal = new bootstrap.Modal(document.getElementById('cancelModal'));
-
-    function openCancelModal(sosId) {
-        document.getElementById('cancelForm').action = '/user/my-sos/' + sosId + '/cancel';
-        cancelModal.show();
-    }
-
-    const socket = new SockJS('/ws-rescue');
-    const stompClient = Stomp.over(socket);
-    stompClient.debug = null;
-
-    stompClient.connect({}, function () {
-        stompClient.subscribe('/topic/manager/sos-status-updated', function (msg) {
-            const updatedSos = JSON.parse(msg.body);
-            const badge = document.getElementById('badge-' + updatedSos.sosId);
-            if (badge) {
-                if (updatedSos.status === 'IN_PROGRESS') {
-                    badge.className = 'badge status-badge bg-info text-dark';
-                    badge.innerText = '🚤 ĐỘI CỨU HỘ ĐANG TRÊN ĐƯỜNG ĐẾN';
-                } else if (updatedSos.status === 'COMPLETED') {
-                    badge.className = 'badge status-badge bg-success';
-                    badge.innerText = '✅ ĐÃ GIẢI CỨU AN TOÀN';
-                } else if (updatedSos.status === 'CANCELLED') {
-                    badge.className = 'badge status-badge bg-secondary';
-                    badge.innerText = '❌ ĐÃ HỦY';
-                }
-            }
-        });
-    });
-</script>
 </body>
 </html>

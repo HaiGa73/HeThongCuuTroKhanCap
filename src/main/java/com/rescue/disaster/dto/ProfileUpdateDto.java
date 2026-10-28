@@ -1,12 +1,15 @@
 package com.rescue.disaster.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import org.springframework.web.multipart.MultipartFile;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProfileUpdateDto {
     private String fullName;
-    private String phoneNumber;
-    private String email;
-    private MultipartFile avatarFile;
+    private String address;
 }

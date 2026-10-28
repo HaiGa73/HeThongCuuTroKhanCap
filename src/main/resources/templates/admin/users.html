@@ -20,6 +20,7 @@
         .main-wrapper { margin-left: 256px; min-height: 100vh; display: flex; flex-direction: column; }
         .admin-header { height: 64px; background: #fff; border-bottom: 1px solid #d8dbe0; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; position: sticky; top: 0; z-index: 1020; }
         .coreui-card { background: #fff; border: 0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .user-clickable-link:hover { text-decoration: underline !important; }
     </style>
 </head>
 <body>
@@ -86,9 +87,10 @@
                     <div class="col-md-4">
                         <select name="role" class="form-select">
                             <option value="">-- Tất cả vai trò --</option>
-                            <option value="ROLE_ADMIN" th:selected="${selectedRole == 'ROLE_ADMIN' or selectedRole == 'ADMIN'}">ADMIN (Quản trị viên)</option>
-                            <option value="ROLE_MANAGER" th:selected="${selectedRole == 'ROLE_MANAGER' or selectedRole == 'MANAGER'}">MANAGER (Điều phối viên)</option>
-                            <option value="ROLE_USER" th:selected="${selectedRole == 'ROLE_USER' or selectedRole == 'USER'}">USER (Người dân)</option>
+                            <option value="ROLE_ADMIN" th:selected="${selectedRole == 'ROLE_ADMIN' or selectedRole == 'ADMIN'}">ADMIN (Ban Chỉ Đạo)</option>
+                            <option value="ROLE_MANAGER" th:selected="${selectedRole == 'ROLE_MANAGER' or selectedRole == 'MANAGER'}">MANAGER (Chỉ Huy Vùng)</option>
+                            <option value="ROLE_RESCUE_TEAM" th:selected="${selectedRole == 'ROLE_RESCUE_TEAM' or selectedRole == 'RESCUE_TEAM'}">RESCUE TEAM (Đội Cứu Hộ)</option>
+                            <option value="ROLE_USER" th:selected="${selectedRole == 'ROLE_USER' or selectedRole == 'USER'}">USER (Người Dân)</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -110,7 +112,7 @@
                                 <th>Thông Tin Liên Hệ</th>
                                 <th>Vai Trò (Role)</th>
                                 <th>Trạng Thái</th>
-                                <th class="text-center" style="width: 260px;">Thao Tác Quản Trị</th>
+                                <th class="text-center" style="width: 270px;">Thao Tác Quản Trị</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -121,16 +123,54 @@
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="bg-light rounded-circle p-2 text-danger fw-bold border" style="width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">
-                                            <i class="bi bi-person-fill"></i>
+                                            <i th:if="${#strings.contains(u.role, 'MANAGER')}" class="bi bi-person-badge-fill text-primary"></i>
+                                            <i th:if="${#strings.contains(u.role, 'ADMIN')}" class="bi bi-shield-lock-fill text-danger"></i>
+                                            <i th:if="${!#strings.contains(u.role, 'MANAGER') and !#strings.contains(u.role, 'ADMIN')}" class="bi bi-person-fill text-secondary"></i>
                                         </div>
                                         <div>
-                                            <strong class="text-dark" th:text="${u.username}">username</strong>
-                                            <div class="small text-muted" th:text="'ID: #' + ${u.id != null ? u.id : u.userId}">#1</div>
+                                            <!-- Nếu là MANAGER: Bấm vào mở trang quản lý các đội của Manager -->
+                                            <div th:if="${#strings.contains(u.role, 'MANAGER')}">
+                                                <a th:href="@{/admin/users/manager/{id}/teams(id=${u.userId != null ? u.userId : u.id})}" 
+                                                   class="fw-bold text-primary text-decoration-none user-clickable-link">
+                                                    <span th:text="${u.username}">manager_username</span>
+                                                    <i class="bi bi-box-arrow-up-right small ms-1"></i>
+                                                </a>
+                                                <div>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;">
+                                                        <i class="bi bi-life-preserver me-1"></i>Quản lý đội
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Nếu là USER hoặc vai trò khác: Bấm vào xem chi tiết hồ sơ & lịch sử SOS -->
+                                            <div th:unless="${#strings.contains(u.role, 'MANAGER')}">
+                                                <a th:href="@{/admin/users/{id}/detail(id=${u.userId != null ? u.userId : u.id})}" 
+                                                   class="fw-bold text-dark text-decoration-none user-clickable-link">
+                                                    <span th:text="${u.username}">username</span>
+                                                    <i class="bi bi-box-arrow-up-right small ms-1 text-muted"></i>
+                                                </a>
+                                                <div>
+                                                    <span class="badge bg-light text-secondary border" style="font-size: 0.7rem;">
+                                                        <i class="bi bi-info-circle me-1"></i>Xem hồ sơ
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="small text-muted" th:text="'ID: #' + ${u.userId != null ? u.userId : u.id}">#1</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="fw-semibold text-dark" th:text="${u.fullName ?: 'Chưa cập nhật'}">Nguyễn Văn A</span>
+                                    <!-- Họ tên click tương tự -->
+                                    <a th:if="${#strings.contains(u.role, 'MANAGER')}" 
+                                       th:href="@{/admin/users/manager/{id}/teams(id=${u.userId != null ? u.userId : u.id})}"
+                                       class="fw-semibold text-dark text-decoration-none user-clickable-link"
+                                       th:text="${u.fullName ?: 'Chưa cập nhật'}">Nguyễn Văn A</a>
+
+                                    <a th:unless="${#strings.contains(u.role, 'MANAGER')}" 
+                                       th:href="@{/admin/users/{id}/detail(id=${u.userId != null ? u.userId : u.id})}"
+                                       class="fw-semibold text-dark text-decoration-none user-clickable-link"
+                                       th:text="${u.fullName ?: 'Chưa cập nhật'}">Nguyễn Văn A</a>
                                 </td>
                                 <td>
                                     <div class="small"><i class="bi bi-envelope me-1 text-muted"></i><span th:text="${u.email ?: 'Không có'}">email@gmail.com</span></div>
@@ -140,7 +180,8 @@
                                     <!-- Hiển thị badge theo Role -->
                                     <span th:if="${#strings.contains(u.role, 'ADMIN')}" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">ADMIN</span>
                                     <span th:if="${#strings.contains(u.role, 'MANAGER')}" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">MANAGER</span>
-                                    <span th:if="${!#strings.contains(u.role, 'ADMIN') and !#strings.contains(u.role, 'MANAGER')}" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">USER</span>
+                                    <span th:if="${#strings.contains(u.role, 'RESCUE_TEAM') or #strings.contains(u.role, 'TEAM')}" class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">ĐỘI CỨU HỘ</span>
+                                    <span th:if="${!#strings.contains(u.role, 'ADMIN') and !#strings.contains(u.role, 'MANAGER') and !#strings.contains(u.role, 'RESCUE_TEAM') and !#strings.contains(u.role, 'TEAM')}" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">USER</span>
                                 </td>
                                 <td>
                                     <span th:if="${u.enabled == null or u.enabled == true}" class="badge bg-success">
@@ -153,10 +194,11 @@
                                 <td>
                                     <div class="d-flex align-items-center gap-2 justify-content-center">
                                         <!-- Form đổi quyền Role -->
-                                        <form th:action="@{/admin/users/{id}/role(id=${u.id != null ? u.id : u.userId})}" method="post" class="d-flex gap-1">
-                                            <select name="role" class="form-select form-select-sm" style="width: 110px;">
+                                        <form th:action="@{/admin/users/{id}/role(id=${u.userId != null ? u.userId : u.id})}" method="post" class="d-flex gap-1">
+                                            <select name="role" class="form-select form-select-sm" style="width: 120px;">
                                                 <option value="ROLE_USER" th:selected="${#strings.contains(u.role, 'USER')}">User</option>
                                                 <option value="ROLE_MANAGER" th:selected="${#strings.contains(u.role, 'MANAGER')}">Manager</option>
+                                                <option value="ROLE_RESCUE_TEAM" th:selected="${#strings.contains(u.role, 'RESCUE_TEAM') or #strings.contains(u.role, 'TEAM')}">Cứu Hộ</option>
                                                 <option value="ROLE_ADMIN" th:selected="${#strings.contains(u.role, 'ADMIN')}">Admin</option>
                                             </select>
                                             <button type="submit" class="btn btn-sm btn-outline-primary" title="Lưu phân quyền">
@@ -165,7 +207,7 @@
                                         </form>
 
                                         <!-- Nút Khóa / Mở khóa -->
-                                        <form th:action="@{/admin/users/{id}/toggle-status(id=${u.id != null ? u.id : u.userId})}" method="post">
+                                        <form th:action="@{/admin/users/{id}/toggle-status(id=${u.userId != null ? u.userId : u.id})}" method="post">
                                             <button type="submit" class="btn btn-sm" 
                                                     th:classappend="${u.enabled == null or u.enabled == true} ? 'btn-outline-danger' : 'btn-outline-success'"
                                                     th:title="${u.enabled == null or u.enabled == true} ? 'Khóa tài khoản này' : 'Mở khóa tài khoản'">

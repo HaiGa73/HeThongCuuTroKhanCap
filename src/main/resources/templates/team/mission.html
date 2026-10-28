@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trung Tâm Tác Chiến - Đội Cứu Hộ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        /* NỀN GIAO DIỆN CÔNG VỤ HIỆN ĐẠI (CHỐNG CHÓI LÓA NGOÀI TRỜI) */
+        body { 
+            background: linear-gradient(135deg, #e9eef5 0%, #f4f6fa 100%); 
+            color: #1e293b; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            min-height: 100vh;
+            padding-bottom: 70px; 
+        }
+
+        /* Giới hạn độ rộng khung làm việc chuẩn di động / máy tính bảng */
+        .tactical-container {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        /* Card ca cứu nạn bình thường */
+        .mission-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1px solid #dce3ed;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+            transition: all 0.25s ease;
+        }
+
+        /* Card khẩn cấp đang chờ nhận lệnh (nhấp nháy viền đỏ) */
+        .urgent-card { 
+            background: #ffffff;
+            border-radius: 18px;
+            border: 2px solid #ef4444; 
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.35); 
+            animation: pulse-border 1.8s infinite; 
+        }
+        @keyframes pulse-border { 
+            0% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.3); } 
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.7); } 
+            100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.3); } 
+        }
+
+        .btn-call { 
+            background: #16a34a; 
+            color: #fff; 
+            font-weight: 700; 
+            border-radius: 50px; 
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+        }
+        .btn-call:hover { background: #15803d; color: #fff; }
+
+        .btn-map { 
+            background: #0284c7; 
+            color: #fff; 
+            font-weight: 700; 
+            border-radius: 50px; 
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+        }
+        .btn-map:hover { background: #0369a1; color: #fff; }
+
+        .btn-confirm-action { 
+            font-size: 1.15rem; 
+            font-weight: 800; 
+            padding: 14px; 
+            border-radius: 14px; 
+            letter-spacing: 0.5px; 
+        }
+
+        .note-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #f59e0b;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header điều phối -->
+<div class="bg-white py-3 px-4 border-bottom shadow-sm sticky-top">
+    <div class="tactical-container d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-danger-subtle p-2 rounded-circle text-danger">
+                <i class="bi bi-life-preserver fs-3"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-bold text-dark fs-5" th:text="${team != null ? team.teamName : 'Đội Cứu Hộ'}">Đội Cano 01</h6>
+                <small class="text-success fw-semibold"><i class="bi bi-circle-fill me-1" style="font-size: 9px;"></i>Sẵn sàng trực chiến vệ tinh</small>
+            </div>
+        </div>
+        <a href="/auth/logout" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">
+            <i class="bi bi-box-arrow-right me-1"></i>Thoát
+        </a>
+    </div>
+</div>
+
+<div class="tactical-container py-4 px-3">
+    <!-- Thông báo kết quả flash -->
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center rounded-3 shadow-sm">
+        <i class="bi bi-check-circle-fill me-1"></i><span th:text="${successMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger fw-bold text-center rounded-3 shadow-sm" th:text="${error}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-broadcast text-danger me-2"></i>LỆNH ĐIỀU ĐỘNG THỰC ĐỊA
+        </h5>
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill fw-bold" id="live-status">
+            ● LIVE SẴN SÀNG
+        </span>
+    </div>
+
+    <!-- Khi chưa có ca cứu nạn nào -->
+    <div th:if="${missions == null or missions.isEmpty()}" class="mission-card p-5 text-center my-3">
+        <i class="bi bi-shield-check display-3 text-secondary mb-3"></i>
+        <h5 class="fw-bold text-dark">Hiện chưa có lệnh điều phối mới</h5>
+        <p class="text-muted small mb-0">Khi Ban chỉ huy (Manager) chỉ định ca cứu nạn cho đội, điện thoại sẽ tự động rung chuông báo động.</p>
+    </div>
+
+    <!-- Danh sách ca cứu nạn được giao -->
+    <div class="d-flex flex-column gap-3" th:if="${missions != null}">
+        <div th:each="sos : ${missions}">
+            <div class="p-4" th:classappend="${sos.status == 'PENDING'} ? 'urgent-card' : 'mission-card'">
+                
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-dark fs-6 fw-bold px-3 py-2 rounded-pill" th:text="'#SOS-' + ${sos.sosId}">#SOS-9</span>
+                        <span th:if="${sos.priority == 'CRITICAL'}" class="badge bg-danger px-3 py-2 rounded-pill">🔴 CỨU GẤP</span>
+                        <span th:if="${sos.priority == 'HIGH'}" class="badge bg-warning text-dark px-3 py-2 rounded-pill">🟠 NƯỚC DÂNG</span>
+                    </div>
+                    <div>
+                        <span th:if="${sos.status == 'PENDING'}" class="badge bg-danger py-2 px-3 rounded-pill">
+                            ⏳ CHỜ ĐỘI XÁC NHẬN
+                        </span>
+                        <span th:if="${sos.status == 'IN_PROGRESS'}" class="badge bg-primary py-2 px-3 rounded-pill">
+                            🚤 ĐANG TIẾP CẬN
+                        </span>
+                        <span th:if="${sos.status == 'COMPLETED'}" class="badge bg-success py-2 px-3 rounded-pill">
+                            ✅ ĐÃ HOÀN THÀNH
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Địa chỉ hiện trường -->
+                <div class="mb-3">
+                    <span class="text-muted small fw-bold text-uppercase">Vị trí mắc kẹt hiện trường:</span>
+                    <h4 class="fw-bold text-danger mt-1 mb-0" th:text="${sos.addressDetail}">XYZ</h4>
+                </div>
+
+                <div class="row g-2 mb-3 bg-light p-3 rounded-3 border">
+                    <div class="col-6">
+                        <span class="text-muted small">Người gặp nạn:</span>
+                        <div class="fw-bold text-dark fs-6" th:text="${sos.senderName}">Người dân</div>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-muted small">Số người mắc kẹt:</span>
+                        <div class="fw-bold text-primary fs-5" th:text="${sos.numberOfPeople} + ' Người'">3 Người</div>
+                    </div>
+                </div>
+
+                <!-- Lệnh chỉ đạo từ Manager -->
+                <div class="p-3 rounded-3 note-box mb-3">
+                    <span class="text-warning-emphasis small fw-bold"><i class="bi bi-chat-left-text-fill me-1"></i> Mệnh lệnh từ Chỉ Huy:</span>
+                    <p class="mb-0 text-dark fw-semibold mt-1" th:text="${sos.managerNote ?: 'Tiếp cận nhanh hiện trường và báo cáo tình hình.'}">Di chuyển khẩn cấp</p>
+                </div>
+
+                <!-- 2 Nút tương tác nhanh: Bấm Gọi & Mở Google Maps -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <a th:href="'tel:' + ${sos.phoneNumber}" class="btn btn-call w-100 py-2">
+                            <i class="bi bi-telephone-fill me-1"></i> GỌI DÂN
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a th:href="'https://www.google.com/maps?q=' + ${sos.latitude} + ',' + ${sos.longitude}" 
+                           target="_blank" class="btn btn-map w-100 py-2">
+                            <i class="bi bi-geo-alt-fill me-1"></i> MỞ BẢN ĐỒ
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 1. NÚT XÁC NHẬN NHẬN LỆNH -->
+                <form th:if="${sos.status == 'PENDING'}" th:action="@{/team/mission/{id}/confirm(id=${sos.sosId})}" method="post">
+                    <button type="submit" class="btn btn-danger btn-confirm-action w-100 shadow">
+                        ⚡ XÁC NHẬN NHẬN LỆNH & XUẤT PHÁT
+                    </button>
+                </form>
+
+                <!-- 2. NÚT BÁO HOÀN THÀNH KHI ĐÃ ĐƯA VỀ NƠI AN TOÀN -->
+                <form th:if="${sos.status == 'IN_PROGRESS'}" th:action="@{/team/mission/{id}/complete(id=${sos.sosId})}" method="post"
+                      onsubmit="return confirm('Xác nhận đã giải cứu toàn bộ người dân về nơi an toàn?');">
+                    <button type="submit" class="btn btn-success btn-confirm-action w-100 shadow">
+                        ✅ ĐÃ GIẢI CỨU THÀNH CÔNG (HOÀN THÀNH)
+                    </button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const teamId = /*[[${team != null ? team.teamId : 0}]]*/ 0;
+
+    function playAlertSiren() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.3);
+            gain.connect(ctx.destination);
+            osc.connect(gain);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.8);
+        } catch (e) {
+            console.log("Audio alert: " + e);
+        }
+    }
+
+    if (teamId > 0) {
+        const socket = new SockJS('/ws-rescue');
+        const stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, function () {
+            stompClient.subscribe('/topic/team/' + teamId, function () {
+                playAlertSiren();
+                alert('🚨 CÓ LỆNH ĐIỀU ĐỘNG CỨU NẠN MỚI TỪ BAN CHỈ HUY!');
+                location.reload();
+            });
+        });
+    }
+</script>
+</body>
+</html>

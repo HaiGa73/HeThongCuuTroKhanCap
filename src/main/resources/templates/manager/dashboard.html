@@ -82,7 +82,13 @@
                                 <i class="bi bi-boxes me-2"></i>Quản Lý Kho Vật Phẩm
                             </a>
                         </li>
-
+						
+						<li th:if="${#authorization.expression('hasRole(''RESCUE_TEAM'')')}">
+						    <a class="dropdown-item text-danger fw-bold" href="/team/mission">
+						        <i class="bi bi-life-preserver me-2"></i>Trực Ban Tác Chiến Cano
+						    </a>
+						</li>
+						
                         <!-- Dành riêng cho ADMIN -->
                         <li th:if="${isAdmin}">
                             <a class="dropdown-item text-warning fw-bold" href="/analytics/dashboard">
@@ -140,8 +146,13 @@
                             <div th:if="${sos.managerNote != null and !sos.managerNote.isEmpty()}" class="mt-1 small text-success fst-italic">
                                 ↳ <b>Phương án:</b> <span th:text="${sos.managerNote}"></span>
                             </div>
+                            
+                            <!-- Hiển thị đội cano được gán -->
+				            <div th:if="${sos.rescueTeam != null}" class="mt-1 small text-danger fw-bold">
+				                <i class="bi bi-life-preserver me-1"></i>Đội phụ trách: <span th:text="${sos.rescueTeam.teamName}"></span>
+				            </div>
                         </td>
-
+						
                         <td class="text-center">
                             <span class="badge bg-secondary fs-6" th:text="${sos.numberOfPeople}">1</span>
                         </td>
@@ -245,9 +256,17 @@
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">2. Điều động Đội cứu hộ / Cano phụ trách:</label>
+                            <select id="mTeamSelect" class="form-select border-danger">
+                                <option value="">-- Chưa gán đội cứu hộ --</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">Danh sách chỉ hiển thị các đội thuộc quyền quản lý trực tiếp của bạn.</small>
+                        </div>
+
                         <div class="mb-4">
-                            <label class="form-label fw-bold small">2. Giải thích chi tiết & Ghi chú phương án điều phối:</label>
-                            <textarea id="mManagerNote" class="form-control" rows="6" 
+                            <label class="form-label fw-bold small">3. Giải thích chi tiết & Ghi chú phương án điều phối:</label>
+                            <textarea id="mManagerNote" class="form-control" rows="5" 
                                       placeholder="VD: Đã điều động xuồng cano số 02 do Đ/c Hùng phụ trách tiếp cận từ hướng cầu số 3..."></textarea>
                             <small class="text-muted">Ghi chú này sẽ được lưu vào hồ sơ tác chiến để toàn đội theo dõi.</small>
                         </div>
@@ -274,18 +293,47 @@
         document.getElementById('modalTitle').innerText = '🚨 HỒ SƠ TÁC CHIẾN CA CỨU NẠN #' + id;
 
         fetch('/manager/api/sos/' + id)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Mã HTTP: ' + res.status);
+                return res.json();
+            })
             .then(data => {
                 document.getElementById('mSenderName').innerText = data.senderName || 'Người dân';
                 document.getElementById('mPhoneLink').innerText = data.phoneNumber || 'Chưa có';
-                document.getElementById('mPhoneLink').href = 'tel:' + data.phoneNumber;
+                document.getElementById('mPhoneLink').href = 'tel:' + (data.phoneNumber || '');
                 document.getElementById('mAddress').innerText = data.addressDetail || 'Chưa rõ địa chỉ';
-                document.getElementById('mPeople').innerText = data.numberOfPeople + ' người';
-                document.getElementById('mCoords').innerText = Number(data.latitude).toFixed(6) + ', ' + Number(data.longitude).toFixed(6);
+                document.getElementById('mPeople').innerText = (data.numberOfPeople != null ? data.numberOfPeople : 1) + ' người';
+
+                const lat = (data.latitude != null && !isNaN(data.latitude)) ? Number(data.latitude).toFixed(6) : '0.000000';
+                const lng = (data.longitude != null && !isNaN(data.longitude)) ? Number(data.longitude).toFixed(6) : '0.000000';
+                document.getElementById('mCoords').innerText = lat + ', ' + lng;
+
                 document.getElementById('mDesc').innerText = data.description || 'Không có mô tả thêm.';
                 document.getElementById('mStatusSelect').value = data.status || 'PENDING';
                 document.getElementById('mManagerNote').value = data.managerNote || '';
 
+                // Đổ danh sách các đội cứu hộ mà Manager này có quyền quản lý vào thẻ select
+                const teamSelect = document.getElementById('mTeamSelect');
+                teamSelect.innerHTML = '<option value="">-- Chưa gán đội cứu hộ --</option>';
+                if (data.availableTeams && data.availableTeams.length > 0) {
+                    data.availableTeams.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.teamId;
+                        opt.innerText = '🚤 ' + t.teamName;
+                        if (data.assignedTeamId && data.assignedTeamId === t.teamId) {
+                            opt.selected = true;
+                        }
+                        teamSelect.appendChild(opt);
+                    });
+                } else {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.innerText = "(Tài khoản của bạn chưa được phân công quản lý đội nào)";
+                    opt.disabled = true;
+                    teamSelect.appendChild(opt);
+                }
+
+                // Hiển thị ảnh hiện trường
                 const mediaContainer = document.getElementById('mMediaList');
                 mediaContainer.innerHTML = '';
                 if (data.mediaList && data.mediaList.length > 0) {
@@ -302,25 +350,33 @@
 
                 detailModal.show();
             })
-            .catch(err => alert('Không thể lấy chi tiết ca cứu nạn: ' + err));
+            .catch(err => alert('Không thể lấy chi tiết ca cứu nạn: ' + err.message));
     }
 
     function saveHandling() {
         const id = document.getElementById('currentSosId').value;
         const newStatus = document.getElementById('mStatusSelect').value;
         const note = document.getElementById('mManagerNote').value;
+        const teamId = document.getElementById('mTeamSelect').value;
 
         fetch('/manager/api/sos/' + id + '/status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus, note: note })
+            body: JSON.stringify({ 
+                status: newStatus, 
+                note: note,
+                teamId: teamId ? Number(teamId) : null
+            })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error('Không thể lưu');
+            return res.json();
+        })
         .then(data => {
             detailModal.hide();
             location.reload();
         })
-        .catch(err => alert('Lỗi khi lưu xử lý: ' + err));
+        .catch(err => alert('Lỗi khi lưu phương án: ' + err.message));
     }
 
     const socket = new SockJS('/ws-rescue');
