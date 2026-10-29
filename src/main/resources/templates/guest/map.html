@@ -214,9 +214,15 @@
     // Khởi tạo bản đồ
     const defaultCenter = [10.841062, 107.366654];
     const map = L.map('map').setView(defaultCenter, 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap'
+    
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 250);
+    
+    L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
     }).addTo(map);
 
     let userLocationMarker = null;

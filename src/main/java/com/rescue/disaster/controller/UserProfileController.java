@@ -13,19 +13,21 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.rescue.disaster.dto.ProfileUpdateDto;
 import com.rescue.disaster.entity.User;
 import com.rescue.disaster.repository.UserRepository;
+import com.rescue.disaster.service.UserService;
 
 @Controller
 @RequestMapping("/user/profile")
 public class UserProfileController {
 
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @Autowired
-    public UserProfileController(UserRepository userRepository) {
+    public UserProfileController(UserRepository userRepository, UserService userService) {
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
-    // 1. Hiển thị trang hồ sơ cá nhân
     @GetMapping
     public String showProfile(Authentication auth, Model model) {
         if (auth == null || !auth.isAuthenticated()) {
@@ -48,19 +50,13 @@ public class UserProfileController {
     public String updateProfile(@ModelAttribute("profileDto") ProfileUpdateDto dto,
                                 Authentication auth,
                                 RedirectAttributes redirectAttributes) {
-        if (auth == null) {
+        if (auth == null || !auth.isAuthenticated()) {
             return "redirect:/auth/login";
         }
 
         try {
-            User user = userRepository.findByUsername(auth.getName())
-                    .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại!"));
-
-            user.setFullName(dto.getFullName() != null ? dto.getFullName().trim() : "");
-            user.setAddress(dto.getAddress() != null ? dto.getAddress().trim() : "");
-
-            userRepository.save(user);
-            redirectAttributes.addFlashAttribute("successMsg", "Đã cập nhật thông tin cá nhân thành công!");
+            userService.updateProfile(auth.getName(), dto);
+            redirectAttributes.addFlashAttribute("successMsg", "Đã cập nhật hồ sơ và ảnh đại diện thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMsg", "Lỗi cập nhật: " + e.getMessage());
         }

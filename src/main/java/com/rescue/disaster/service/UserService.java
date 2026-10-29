@@ -44,12 +44,24 @@ public class UserService {
     public void updateProfile(String username, ProfileUpdateDto dto) {
         User user = getUserByUsername(username);
 
-        // Chỉ cập nhật Họ tên và Địa chỉ nhà theo đúng nghiệp vụ mới
+
         if (dto.getFullName() != null) {
             user.setFullName(dto.getFullName().trim());
         }
         if (dto.getAddress() != null) {
             user.setAddress(dto.getAddress().trim());
+        }
+
+
+        if (dto.getAvatarFile() != null && !dto.getAvatarFile().isEmpty()) {
+            try {
+                Map<String, Object> uploadResult = cloudinaryService.uploadFile(dto.getAvatarFile(), "user_avatars");
+                String avatarUrl = (String) uploadResult.get("secure_url");
+                user.setAvatarUrl(avatarUrl);
+            } catch (Exception e) {
+                log.error("Lỗi tải ảnh đại diện lên Cloudinary: {}", e.getMessage());
+                throw new RuntimeException("Không thể tải ảnh đại diện lên Cloudinary: " + e.getMessage());
+            }
         }
 
         userRepository.save(user);

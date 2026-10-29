@@ -15,11 +15,17 @@
             cursor: not-allowed;
             border-color: #e2e8f0;
         }
+        .avatar-preview {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #dc3545;
+        }
     </style>
 </head>
 <body>
 
-<!-- Header điều hướng -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-danger px-4 shadow-sm">
     <a class="navbar-brand fw-bold" href="/">
         <i class="bi bi-shield-shaded me-2"></i>CỨU NẠN THIÊN TAI
@@ -31,7 +37,6 @@
 </nav>
 
 <div class="container py-5" style="max-width: 720px;">
-    <!-- Thông báo kết quả -->
     <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show fw-bold text-center rounded-3 shadow-sm">
         <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMsg}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -42,10 +47,16 @@
     </div>
 
     <div class="profile-card p-4 p-md-5">
+        <!-- Khung hiển thị Avatar hiện tại -->
         <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-4">
-            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" 
-                 style="width: 64px; height: 64px; font-size: 2rem;">
-                <i class="bi bi-person-circle"></i>
+            <div>
+                <img th:if="${user.avatarUrl != null and !user.avatarUrl.isBlank()}" 
+                     th:src="${user.avatarUrl}" alt="Avatar" class="avatar-preview shadow-sm">
+                <div th:unless="${user.avatarUrl != null and !user.avatarUrl.isBlank()}" 
+                     class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center border" 
+                     style="width: 90px; height: 90px; font-size: 2.8rem;">
+                    <i class="bi bi-person-circle"></i>
+                </div>
             </div>
             <div>
                 <h4 class="fw-bold text-dark mb-1" th:text="${user.fullName ?: user.username}">Họ và Tên</h4>
@@ -56,10 +67,12 @@
             </div>
         </div>
 
-        <form th:action="@{/user/profile/update}" th:object="${profileDto}" method="post">
+        <!-- QUAN TRỌNG: Form phải có enctype="multipart/form-data" để gửi file ảnh -->
+        <form th:action="@{/user/profile/update}" th:object="${profileDto}" method="post" enctype="multipart/form-data">
+            
             <h6 class="fw-bold text-secondary text-uppercase small mb-3">1. Thông tin đăng ký cố định (Chỉ xem)</h6>
             
-            <!-- Tên đăng nhập (Locked) -->
+            <!-- Username (Locked) -->
             <div class="mb-3">
                 <label class="form-label small fw-semibold text-muted">
                     <i class="bi bi-lock-fill me-1 text-danger"></i>Tên đăng nhập (Username):
@@ -70,7 +83,7 @@
                 </div>
             </div>
 
-            <!-- Số điện thoại (Locked) -->
+            <!-- Phone (Locked) -->
             <div class="mb-3">
                 <label class="form-label small fw-semibold text-muted">
                     <i class="bi bi-lock-fill me-1 text-danger"></i>Số điện thoại xác thực lúc đăng ký:
@@ -90,10 +103,18 @@
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope-fill"></i></span>
                     <input type="email" class="form-control form-control-locked" th:value="${user.email ?: 'Chưa thiết lập'}" readonly>
                 </div>
-                <small class="text-muted fst-italic">* Để bảo mật và xác minh cứu nạn, số điện thoại, email và username không thể chỉnh sửa.</small>
             </div>
 
             <h6 class="fw-bold text-primary text-uppercase small mb-3 border-top pt-4">2. Thông tin cá nhân có thể thay đổi</h6>
+
+            <!-- Chọn ảnh đại diện mới -->
+            <div class="mb-3">
+                <label class="form-label fw-bold text-dark">
+                    Thay đổi ảnh đại diện (Avatar):
+                </label>
+                <input type="file" th:field="*{avatarFile}" class="form-control" accept="image/*">
+                <small class="text-muted">Chọn ảnh định dạng JPG, PNG để cập nhật ảnh đại diện mới.</small>
+            </div>
 
             <!-- Họ và tên (Editable) -->
             <div class="mb-3">
@@ -117,10 +138,8 @@
                     <textarea th:field="*{address}" class="form-control border-start-0" rows="3"
                               placeholder="VD: Số 123, Thôn 4, Xã Nam Cường, Huyện Nam Đàn, Nghệ An"></textarea>
                 </div>
-                <small class="text-muted">Địa chỉ này hỗ trợ lực lượng cứu hộ nhanh chóng định vị vị trí nhà khi tiếp nhận tin báo khẩn cấp.</small>
             </div>
 
-            <!-- Nút Lưu -->
             <div class="d-grid mt-4">
                 <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm">
                     <i class="bi bi-check2-circle me-1"></i> Lưu Thay Đổi Hồ Sơ
