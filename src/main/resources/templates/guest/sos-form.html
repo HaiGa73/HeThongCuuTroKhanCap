@@ -14,6 +14,15 @@
         .nav-link:hover { color: #dc3545 !important; }
         #mapPicker { height: 260px; width: 100%; border-radius: 8px; border: 2px solid #dee2e6; }
         .form-card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; }
+        /* Chống tràn viền và tối ưu di động */
+        html, body { max-width: 100vw; overflow-x: hidden; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+            .container, .container-fluid { padding-left: 12px; padding-right: 12px; }
+            .card-body, .card-header { padding: 14px; }
+            .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+        }
+
     </style>
 </head>
 <body>
@@ -117,7 +126,7 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">1. Xác định vị trí của bạn:</label>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                                 <button type="button" class="btn btn-danger btn-sm fw-bold px-3 shadow-sm rounded-pill" onclick="getLocation()">
                                     📍 Lấy Vị Trí Hiện Tại Của Tôi
                                 </button>
@@ -188,8 +197,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const defaultLat = 10.841062;
-    const defaultLng = 107.366654;
+    const defaultLat = 10.880500; // KTX Khu B
+    const defaultLng = 106.782000;
 
     const map = L.map('mapPicker').setView([defaultLat, defaultLng], 13);
     L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {

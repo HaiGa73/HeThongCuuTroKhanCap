@@ -12,6 +12,15 @@
         .card-sos { border-radius: 14px; border: 1px solid #e2e8f0; transition: transform 0.2s ease; }
         .badge-urgent { background: #ef4444; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        /* Chống tràn viền và tối ưu di động */
+        html, body { max-width: 100vw; overflow-x: hidden; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+            .container, .container-fluid { padding-left: 12px; padding-right: 12px; }
+            .card-body, .card-header { padding: 14px; }
+            .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+        }
+
     </style>
 </head>
 <body>
@@ -54,7 +63,7 @@
 </nav>
 
 <div class="container py-4 px-lg-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h4 class="fw-bold mb-1 text-dark">📋 CÁC LỜI KÊU CỨU CỦA BẠN</h4>
             <p class="text-muted small mb-0">Theo dõi tiến độ di chuyển và phương án giải cứu từ lực lượng cứu nạn thực địa</p>
@@ -85,7 +94,7 @@
     <div class="row g-3" th:if="${mySosList != null and !mySosList.isEmpty()}">
         <div class="col-12" th:each="sos : ${mySosList}">
             <div class="card card-sos bg-white shadow-sm p-4">
-                <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                     <div>
                         <span class="badge bg-danger fs-6 fw-bold me-2" th:text="'#SOS-' + ${sos.sosId}">#SOS-1</span>
                         <span th:if="${sos.priority == 'CRITICAL'}" class="badge bg-danger badge-urgent">🔴 KHẨN CẤP</span>

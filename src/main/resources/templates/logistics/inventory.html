@@ -25,6 +25,15 @@
             overflow: hidden;
             box-shadow: 0 4px 14px rgba(0,0,0,0.04);
         }
+        /* Chống tràn viền và tối ưu di động */
+        html, body { max-width: 100vw; overflow-x: hidden; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+            .container, .container-fluid { padding-left: 12px; padding-right: 12px; }
+            .card-body, .card-header { padding: 14px; }
+            .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+        }
+
     </style>
 </head>
 <body>
@@ -111,7 +120,7 @@
 </nav>
 
 <div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h3 class="fw-bold text-dark mb-1">📦 ĐIỀU PHỐI VẬT PHẨM & KHO HÀNG CỨU TRỢ</h3>
             <p class="text-muted small mb-0">Theo dõi lượng nhu yếu phẩm (lương khô, nước sạch, áo phao, thuốc men) phân bổ đến các trạm sơ tán.</p>

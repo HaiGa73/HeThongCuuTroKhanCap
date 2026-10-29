@@ -13,6 +13,15 @@
         .nav-link:hover { color: #dc3545 !important; }
         .card-custom { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; }
         .avatar-thumb { width: 55px; height: 55px; object-fit: cover; border-radius: 8px; }
+        /* Chống tràn viền và tối ưu di động */
+        html, body { max-width: 100vw; overflow-x: hidden; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+            .container, .container-fluid { padding-left: 12px; padding-right: 12px; }
+            .card-body, .card-header { padding: 14px; }
+            .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+        }
+
     </style>
 </head>
 <body>
@@ -103,8 +112,8 @@
         <h2 class="fw-bold text-dark">🔍 CỔNG TRA CỨU TÌM KIẾM THÂN NHÂN</h2>
         <p class="text-muted">Tra cứu thông tin người đã được sơ tán an toàn hoặc người thân đang mất liên lạc trong vùng thiên tai.</p>
         
-        <div class="d-flex justify-content-center gap-3 mt-3">
-            <a href="/relatives/checkin" class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-sm">
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+            <a href="/relatives/checkin" class="btn btn-success fw-bold px-3 py-2 rounded-pill shadow-sm">
                 💚 Tôi đã an toàn (Điểm danh ngay)
             </a>
             <a href="/relatives/missing/report" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm">

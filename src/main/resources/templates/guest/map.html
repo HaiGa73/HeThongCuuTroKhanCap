@@ -25,7 +25,23 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.12);
             border: 1px solid #e2e8f0;
             width: 290px;
+            max-width: calc(100vw - 30px);
+            transition: all 0.3s ease;
         }
+        @media (max-width: 576px) {
+            .map-card-panel {
+                top: 75px;
+                left: 15px;
+                right: 15px;
+                width: auto;
+                max-width: calc(100vw - 30px);
+                padding: 12px;
+            }
+            .map-card-panel.panel-collapsed #panelBodyContent {
+                display: none;
+            }
+        }
+        html, body { max-width: 100vw; overflow-x: hidden; }
 
         /* Bộ Icon Marker 3D sắc nét không lo mất ảnh */
         .custom-marker {
@@ -212,7 +228,7 @@
     const isManagerOrAdmin = /*[[${isManagerOrAdmin}]]*/ false;
 
     // Khởi tạo bản đồ
-    const defaultCenter = [10.841062, 107.366654];
+    const defaultCenter = [10.8805, 106.7820]; // KTX Khu B - ĐHQG TP.HCM
     const map = L.map('map').setView(defaultCenter, 13);
     
     setTimeout(() => {

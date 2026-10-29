@@ -18,6 +18,15 @@
         .clickable-row { cursor: pointer; transition: background-color 0.2s; }
         .clickable-row:hover { filter: brightness(0.96); }
         .media-preview-box { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+        /* Chống tràn viền và tối ưu di động */
+        html, body { max-width: 100vw; overflow-x: hidden; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 768px) {
+            .container, .container-fluid { padding-left: 12px; padding-right: 12px; }
+            .card-body, .card-header { padding: 14px; }
+            .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+        }
+
     </style>
 </head>
 <body>
@@ -110,7 +119,7 @@
 </nav>
 
 <div class="container-fluid py-4 px-lg-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h4 class="fw-bold mb-0 text-dark">DANH SÁCH CA CỨU NẠN THỰC ĐỊA</h4>
             <small class="text-muted">Bấm vào bất kỳ dòng nào hoặc nút "Xử lý ca" để mở khung chi tiết & lập phương án cứu hộ</small>
