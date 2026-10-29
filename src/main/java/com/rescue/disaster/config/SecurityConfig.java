@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**", "/analytics/**", "/alerts/**").hasRole("ADMIN")
 
                 // 3. Phân quyền MANAGER & ADMIN (Chỉ Huy Vùng điều phối SOS)
-                .requestMatchers("/manager/**", "/logistics/inventory", "/logistics/api/**").hasAnyRole("MANAGER", "ADMIN")
+                .requestMatchers("/manager/**", "/logistics/inventory", "/logistics/api/**", "/logistics/shipment/**").hasAnyRole("MANAGER", "ADMIN")
 
                 // 4. Phân quyền RESCUE_TEAM & ADMIN (Đội Cứu Hộ trực chiến cano thực địa)
                 .requestMatchers("/team/**").hasAnyRole("RESCUE_TEAM", "ADMIN")

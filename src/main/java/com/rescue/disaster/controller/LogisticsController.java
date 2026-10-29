@@ -1,6 +1,7 @@
 package com.rescue.disaster.controller;
 
 import com.rescue.disaster.dto.ReliefDonationDto;
+import com.rescue.disaster.entity.ReliefDonation;
 import com.rescue.disaster.entity.Warehouse;
 import com.rescue.disaster.repository.ShelterRepository;
 import com.rescue.disaster.service.LogisticsService;
@@ -41,6 +42,12 @@ public class LogisticsController {
         if (selectedId != null) {
             model.addAttribute("inventories", logisticsService.getInventoriesByWarehouse(selectedId));
         }
+        List<ReliefDonation> donations = logisticsService.getAllDonations();
+        model.addAttribute("donations", donations);
+        model.addAttribute("totalShipments", donations.size());
+        model.addAttribute("pendingShipments", donations.stream().filter(d -> "REGISTERED".equals(d.getStatus())).count());
+        model.addAttribute("inTransitShipments", donations.stream().filter(d -> "EN_ROUTE".equals(d.getStatus())).count());
+        model.addAttribute("completedShipments", donations.stream().filter(d -> "RECEIVED".equals(d.getStatus())).count());
         return "logistics/inventory";
     }
 
@@ -82,5 +89,15 @@ public class LogisticsController {
         logisticsService.registerDonation(dto);
         redirectAttributes.addFlashAttribute("successMsg", "Đăng ký tiếp tế thành công! Đội điều phối sẽ liên hệ để hướng dẫn lộ trình tiếp cận an toàn.");
         return "redirect:/logistics/donate";
+    }
+
+    // Đổi trạng thái lô hàng cứu trợ (nút "Đang đi" / "Đã nhận" ở trang quản lý kho)
+    @PostMapping("/shipment/{id}/status")
+    public String updateShipmentStatus(@PathVariable("id") Long id,
+                                       @RequestParam("status") String status,
+                                       RedirectAttributes redirectAttributes) {
+        logisticsService.updateDonationStatus(id, status);
+        redirectAttributes.addFlashAttribute("successMsg", "Đã cập nhật trạng thái lô hàng #" + id);
+        return "redirect:/logistics/inventory";
     }
 }

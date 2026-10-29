@@ -92,4 +92,13 @@ public class LogisticsService {
     public List<ReliefDonation> getAllDonations() {
         return donationRepository.findAllWithShelter();
     }
+
+    // Cập nhật trạng thái lô hàng cứu trợ (REGISTERED -> EN_ROUTE -> RECEIVED)
+    @Transactional
+    public void updateDonationStatus(Long donationId, String status) {
+        ReliefDonation d = donationRepository.findById(donationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lô hàng #" + donationId));
+        d.setStatus("DELIVERED".equals(status) ? "RECEIVED" : status);
+        donationRepository.save(d);
+    }
 }
